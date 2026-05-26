@@ -1,45 +1,9 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import Navbar from '../component/Navbar';
+import { useNavigate } from 'react-router-dom';
+import Navbar from '../components/Navbar';
 import { PlaceCard } from '@/components/ui/card-22';
-
-// Sample data for exactly two venues
-const sampleVenues = [
-  {
-    images: [
-      'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=800&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?q=80&w=800&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=800&auto=format&fit=crop',
-    ],
-    tags: ['Los Angeles', '100 Guests', 'Luxury'],
-    location: 'Los Angeles',
-    capacity: 100,
-    rating: 4.9,
-    title: 'The Glass Pavilion',
-    dateRange: 'Jun 12 - 18',
-    hostType: 'Superhost',
-    isTopRated: true,
-    description: 'An architectural masterpiece featuring 360-degree glass walls, high ceilings, and stunning garden views.',
-    pricePerNight: 450,
-  },
-  {
-    images: [
-      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=800&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1571896349842-33c89424de2d?q=80&w=800&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=800&auto=format&fit=crop',
-    ],
-    tags: ['Miami', '10 Guests', 'Ocean View'],
-    location: 'Miami',
-    capacity: 10,
-    rating: 4.8,
-    title: 'Sunset Bay Villa',
-    dateRange: 'Jul 20 - 25',
-    hostType: 'Exclusive Agency',
-    isTopRated: false,
-    description: 'A luxurious beachfront villa perfect for intimate weddings, corporate retreats, or elite gatherings.',
-    pricePerNight: 720,
-  },
-];
+import { sampleVenues } from '../data/venuesData';
 
 // Storing drop-down options details in a module-level variable
 const locationOptions = [
@@ -56,6 +20,7 @@ const capacityOptions = [
 ];
 
 export default function Venues() {
+  const navigate = useNavigate();
   const [selectedLocation, setSelectedLocation] = useState<string>('All');
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [selectedCapacity, setSelectedCapacity] = useState<string>('All');
@@ -216,7 +181,10 @@ export default function Venues() {
               isTopRated={venue.isTopRated}
               description={venue.description}
               pricePerNight={venue.pricePerNight}
+              capacity={venue.capacity}
+              eventTypes={venue.eventTypes}
               className="border-white/10 bg-black/40 backdrop-blur-md shadow-2xl hover:border-[#c5a059]/40"
+              onClick={() => navigate('/venue/' + venue.id)}
             />
           ))}
           {filteredVenues.length === 0 && (

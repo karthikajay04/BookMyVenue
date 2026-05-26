@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Mail, Phone, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import Navbar from '../component/Navbar';
+import Navbar from '../components/Navbar';
 
 export default function Contact() {
   const [submitted, setSubmitted] = useState(false);

@@ -4,6 +4,7 @@ import Venues from './page/Venues';
 import Contact from './page/Contact';
 import Login from './page/Login';
 import Signup from './page/Signup';
+import VenueDetail from './page/VenueDetail';
 
 function App() {
   return (
@@ -11,6 +12,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/venues" element={<Venues />} />
+        <Route path="/venue/:id" element={<VenueDetail />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />

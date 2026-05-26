@@ -1,12 +1,11 @@
 import * as React from 'react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Star, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star, ArrowRight, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
-// Interface for component props for type safety and reusability
 interface PlaceCardProps {
   images: string[];
   tags: string[];
@@ -17,7 +16,10 @@ interface PlaceCardProps {
   isTopRated?: boolean;
   description: string;
   pricePerNight: number;
+  capacity: number;
+  eventTypes: string[];
   className?: string;
+  onClick?: () => void;
 }
 
 export const PlaceCard = ({
@@ -30,7 +32,10 @@ export const PlaceCard = ({
   isTopRated = false,
   description,
   pricePerNight,
+  capacity,
+  eventTypes,
   className,
+  onClick,
 }: PlaceCardProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
@@ -89,8 +94,8 @@ export const PlaceCard = ({
       transition={{ duration: 0.5 }}
       variants={contentVariants}
       // --- NEW: Added hover animation ---
-      whileHover={{ 
-        scale: 1.03, 
+      whileHover={{
+        scale: 1.03,
         boxShadow: '0px 10px 30px -5px hsl(var(--foreground) / 0.1)',
         transition: { type: 'spring', stiffness: 300, damping: 20 }
       }}
@@ -99,6 +104,7 @@ export const PlaceCard = ({
         'w-full max-w-sm overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-lg cursor-pointer',
         className
       )}
+      onClick={onClick}
     >
       {/* Image Carousel Section */}
       <div className="relative group h-64">
@@ -119,13 +125,13 @@ export const PlaceCard = ({
             className="absolute h-full w-full object-cover"
           />
         </AnimatePresence>
-        
+
         {/* Carousel Navigation */}
         <div className="absolute inset-0 flex items-center justify-between p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon" className="rounded-full bg-black/30 hover:bg-black/50 text-white" onClick={() => changeImage(-1)}>
+          <Button variant="ghost" size="icon" className="rounded-full bg-black/30 hover:bg-black/50 text-white" onClick={(e) => { e.stopPropagation(); changeImage(-1); }}>
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" className="rounded-full bg-black/30 hover:bg-black/50 text-white" onClick={() => changeImage(1)}>
+          <Button variant="ghost" size="icon" className="rounded-full bg-black/30 hover:bg-black/50 text-white" onClick={(e) => { e.stopPropagation(); changeImage(1); }}>
             <ChevronRight className="h-5 w-5" />
           </Button>
         </div>
@@ -149,7 +155,7 @@ export const PlaceCard = ({
           {images.map((_, index) => (
             <button
               key={index}
-              onClick={() => setCurrentIndex(index)}
+              onClick={(e) => { e.stopPropagation(); setCurrentIndex(index); }}
               className={cn(
                 'h-1.5 w-1.5 rounded-full transition-all',
                 currentIndex === index ? 'w-4 bg-white' : 'bg-white/50'
@@ -164,24 +170,37 @@ export const PlaceCard = ({
       <motion.div variants={contentVariants} className="p-5 space-y-4">
         <motion.div variants={itemVariants} className="flex justify-between items-start">
           <h3 className="text-xl font-bold">{title}</h3>
-          {isTopRated && <Badge variant="outline">Top rated</Badge>}
+
         </motion.div>
 
-        <motion.div variants={itemVariants} className="text-m text-muted-foreground">
-          <span>{dateRange}</span> &bull; <span>{hostType}</span>
-        </motion.div>
+
 
         <motion.p variants={itemVariants} className="text-sm text-muted-foreground leading-relaxed">
           {description}
         </motion.p>
 
+        {/* Specifications Section (Capacity & Event Types) */}
+        <motion.div variants={itemVariants} className="pt-3 pb-1 border-t border-white/5 space-y-2.5">
+          {/* Capacity */}
+          <div className="flex items-center gap-2 text-xs text-white/70">
+            <Users className="w-3.5 h-3.5 text-[#c5a059]" />
+            <span>Capacity: <strong className="text-white">{capacity} Guests</strong></span>
+          </div>
+          
+          {/* Event Types */}
+          <div className="flex flex-wrap gap-1.5 pt-0.5">
+            {eventTypes.map((type) => (
+              <Badge key={type} className="bg-[#c5a059]/10 text-[#c5a059] border border-[#c5a059]/20 hover:bg-[#c5a059]/20 text-[10px] font-medium py-0.5 px-2.5 rounded-full">
+                {type}
+              </Badge>
+            ))}
+          </div>
+        </motion.div>
+
         <motion.div variants={itemVariants} className="flex justify-between items-center pt-2">
-          <p className="font-semibold">
-            ${pricePerNight}{' '}
-            <span className="text-sm font-normal text-muted-foreground">/ night</span>
-          </p>
-          <Button className="group">
-            Book Now
+
+          <Button className="group" onClick={(e) => { e.stopPropagation(); if (onClick) onClick(); }}>
+            View Venue
             <ArrowRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
           </Button>
         </motion.div>

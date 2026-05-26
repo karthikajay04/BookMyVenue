@@ -1,7 +1,7 @@
 import { Building2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import BoomerangVideoBg from '../component/BoomerangVideoBg';
-import Navbar from '../component/Navbar';
+import BoomerangVideoBg from '../components/BoomerangVideoBg';
+import Navbar from '../components/Navbar';
 
 import BG_VIDEO from '../assets/video/vd1.mp4';
 
