@@ -45,10 +45,10 @@ function Home() {
           BookMyVenue Platform helps venue owners easily list their spaces, reach thousands of hosts, and manage bookings for any type of event.
         </p>
         <div className="flex items-center gap-4 flex-wrap">
-          <Link to="/venues" className="bg-[#c5a059] hover:bg-[#ab8237] text-white text-sm font-semibold px-5 sm:px-6 py-2.5 sm:py-3 rounded-full transition-colors shadow-sm">
-            Book a Venue
+          <Link to="/addvenues" className="bg-[#c5a059] hover:bg-[#ab8237] text-white text-sm font-semibold px-5 sm:px-6 py-2.5 sm:py-3 rounded-full transition-colors shadow-sm">
+            Add Your Venue
           </Link>
-          <Link to="/about" className="text-white text-sm font-bold hover:opacity-80 transition-opacity flex items-center">
+          <Link to="/knowmore" className="text-white text-sm font-bold hover:opacity-80 transition-opacity flex items-center">
             Know More.
           </Link>
         </div>
