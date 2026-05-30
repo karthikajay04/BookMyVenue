@@ -7,21 +7,43 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg('');
     if (!email || !password) return;
 
     setIsLoading(true);
-    // Mimic API authentication
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      // Save user session details
+      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('token', data.token);
+
       setSuccess(true);
       setTimeout(() => {
         navigate('/venues');
       }, 1000);
-    }, 1200);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Invalid email or password');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -95,6 +117,13 @@ export default function Login() {
                 className="bg-transparent border-b border-white/10 focus:border-[#c5a059] focus:outline-none py-2 text-white placeholder-white/20 transition-colors duration-300 font-medium"
               />
             </div>
+
+            {/* Error Message */}
+            {errorMsg && (
+              <p className="text-red-500 text-xs font-semibold text-center mt-1">
+                {errorMsg}
+              </p>
+            )}
 
             {/* Submit Action Button */}
             <button

@@ -72,3 +72,22 @@ export const sampleVenues: Venue[] = [
     eventTypes: ['Intimate Weddings', 'Executive Retreats', 'VVIP Dinners', 'Private Celebrations'],
   },
 ];
+
+export const getVenues = (): Venue[] => {
+  const stored = localStorage.getItem('bookmyvenue_data');
+  if (!stored) {
+    localStorage.setItem('bookmyvenue_data', JSON.stringify(sampleVenues));
+    return sampleVenues;
+  }
+  try {
+    return JSON.parse(stored);
+  } catch (e) {
+    return sampleVenues;
+  }
+};
+
+export const addVenue = (venue: Venue) => {
+  const current = getVenues();
+  const updated = [...current, venue];
+  localStorage.setItem('bookmyvenue_data', JSON.stringify(updated));
+};

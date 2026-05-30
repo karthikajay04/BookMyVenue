@@ -1,10 +1,33 @@
 import { useState, useEffect } from 'react';
-import { LogIn, UserPlus, Menu, X } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { LogIn, UserPlus, Menu, X, LogOut } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        setUser(null);
+      }
+    } else {
+      setUser(null);
+    }
+  }, [location]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    setUser(null);
+    setMenuOpen(false);
+    navigate('/');
+  };
 
   useEffect(() => {
     if (menuOpen) {
@@ -53,14 +76,38 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-3 sm:gap-6 text-white/95">
-          <Link to="/signup" className="hidden sm:flex items-center gap-2 text-sm font-medium hover:text-[#c5a059] transition-colors">
-            <UserPlus className="w-4 h-4" />
-            Sign Me Up!
-          </Link>
-          <Link to="/login" className="hidden sm:flex items-center gap-2 text-sm font-medium hover:text-[#c5a059] transition-colors">
-            <LogIn className="w-4 h-4" />
-            Login
-          </Link>
+          {user ? (
+            <>
+              {/* Profile Icon and Username */}
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+                <div className="w-7 h-7 rounded-full bg-[#c5a059] flex items-center justify-center text-black font-bold text-xs uppercase select-none">
+                  {user.name ? user.name.charAt(0) : 'U'}
+                </div>
+                <span className="hidden md:inline text-sm font-medium text-white/90">
+                  {user.name}
+                </span>
+              </div>
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="hidden sm:flex items-center gap-2 text-sm font-medium hover:text-[#c5a059] transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/signup" className="hidden sm:flex items-center gap-2 text-sm font-medium hover:text-[#c5a059] transition-colors">
+                <UserPlus className="w-4 h-4" />
+                Sign Me Up!
+              </Link>
+              <Link to="/login" className="hidden sm:flex items-center gap-2 text-sm font-medium hover:text-[#c5a059] transition-colors">
+                <LogIn className="w-4 h-4" />
+                Login
+              </Link>
+            </>
+          )}
           <button
             onClick={() => setMenuOpen((v) => !v)}
             className="lg:hidden relative flex items-center justify-center w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white transition-all duration-300 hover:bg-black/80"
@@ -117,14 +164,37 @@ export default function Navbar() {
               }`}
             style={{ transitionDelay: menuOpen ? '400ms' : '0ms' }}
           >
-            <Link to="/signup" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-sm font-medium text-white/80 sm:hidden">
-              <UserPlus className="w-4 h-4" />
-              Sign Me Up!
-            </Link>
-            <Link to="/login" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-sm font-medium text-white/80 sm:hidden">
-              <LogIn className="w-4 h-4" />
-              Login
-            </Link>
+            {user ? (
+              <>
+                <div className="flex items-center gap-3 py-3 border-b border-white/10 sm:hidden">
+                  <div className="w-10 h-10 rounded-full bg-[#c5a059] flex items-center justify-center text-black font-bold text-sm uppercase">
+                    {user.name ? user.name.charAt(0) : 'U'}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-white font-semibold text-base">{user.name}</span>
+                    <span className="text-white/40 text-xs">{user.email}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 text-sm font-medium text-white/80 sm:hidden py-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/signup" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-sm font-medium text-white/80 sm:hidden">
+                  <UserPlus className="w-4 h-4" />
+                  Sign Me Up!
+                </Link>
+                <Link to="/login" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-sm font-medium text-white/80 sm:hidden">
+                  <LogIn className="w-4 h-4" />
+                  Login
+                </Link>
+              </>
+            )}
             <Link to="/venues" onClick={() => setMenuOpen(false)} className="mt-2 text-center bg-[#c5a059] hover:bg-[#ab8237] text-white text-sm font-semibold px-5 py-3 rounded-full transition-colors">
               Book Your Venue
             </Link>

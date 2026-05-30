@@ -8,7 +8,7 @@ import {
 import Navbar from '../components/Navbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { sampleVenues } from '../data/venuesData';
+import { getVenues } from '../data/venuesData';
 import { cn } from '@/lib/utils';
 
 export default function VenueDetail() {
@@ -17,8 +17,9 @@ export default function VenueDetail() {
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [bookingStep, setBookingStep] = useState<'idle' | 'success'>('idle');
 
-  // Find the requested venue
-  const venue = sampleVenues.find((v) => v.id === id);
+  // Find the requested venue dynamically
+  const venues = getVenues();
+  const venue = venues.find((v) => v.id === id);
 
   // Scroll to top on mount or when id changes
   useEffect(() => {

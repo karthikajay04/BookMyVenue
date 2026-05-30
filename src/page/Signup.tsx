@@ -12,7 +12,7 @@ export default function Signup() {
   const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
@@ -24,14 +24,34 @@ export default function Signup() {
     }
 
     setIsLoading(true);
-    // Mimic API registration
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, email, password })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Signup failed');
+      }
+
+      // Save user session details
+      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('token', data.token);
+
       setSuccess(true);
       setTimeout(() => {
         navigate('/venues');
       }, 1000);
-    }, 1200);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'An error occurred during signup');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

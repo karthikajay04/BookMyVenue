@@ -1,16 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { PlaceCard } from '@/components/ui/card-22';
-import { sampleVenues } from '../data/venuesData';
-
-// Storing drop-down options details in a module-level variable
-const locationOptions = [
-  { value: 'All', label: 'All Locations' },
-  { value: 'Los Angeles', label: 'Los Angeles' },
-  { value: 'Miami', label: 'Miami' },
-];
+import { getVenues } from '../data/venuesData';
+import type { Venue } from '../data/venuesData';
 
 const capacityOptions = [
   { value: 'All', label: 'Any Capacity' },
@@ -21,13 +15,25 @@ const capacityOptions = [
 
 export default function Venues() {
   const navigate = useNavigate();
+  const [venues, setVenues] = useState<Venue[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string>('All');
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [selectedCapacity, setSelectedCapacity] = useState<string>('All');
   const [capacityDropdownOpen, setCapacityDropdownOpen] = useState<boolean>(false);
 
+  useEffect(() => {
+    setVenues(getVenues());
+  }, []);
+
+  // Compute location options dynamically from existing venues
+  const uniqueCities = Array.from(new Set(venues.map(v => v.location))).filter(Boolean);
+  const locationOptions = [
+    { value: 'All', label: 'All Locations' },
+    ...uniqueCities.map(city => ({ value: city, label: city }))
+  ];
+
   // Filter venues based on selected location and capacity state
-  const filteredVenues = sampleVenues.filter((venue) => {
+  const filteredVenues = venues.filter((venue) => {
     const matchesLocation = selectedLocation === 'All' || venue.location === selectedLocation;
 
     let matchesCapacity = true;
