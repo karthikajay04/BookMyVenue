@@ -7,13 +7,15 @@ const generateToken = (email, role) => {
   return jwt.sign({ email, role }, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
 
+
 /**
  * @desc    Register a new user
  * @route   POST /api/auth/signup
  * @access  Public
  */
 export const registerUser = async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, role } = req.body;
+  const userRole =role === "venue_owner" ? "venue_owner" : "user";
 
   try {
     // 1. Basic validation
@@ -46,9 +48,14 @@ export const registerUser = async (req, res) => {
 
     // 4. Insert new user into database
     const insertResult = await query(
-      "INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING name, email, role",
-      [name.trim(), email.toLowerCase().trim(), hashedPassword, "user"],
-    );
+  "INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING name, email, role",
+  [
+    name.trim(),
+    email.toLowerCase().trim(),
+    hashedPassword,
+    userRole,
+  ]
+);
 
     const newUser = insertResult.rows[0];
 

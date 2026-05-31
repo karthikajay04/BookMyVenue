@@ -42,14 +42,13 @@ function Home() {
           </span>
         </div>
         <p className="text-white/80 text-xs leading-relaxed mb-6 max-w-xs font-semibold">
-          BookMyVenue Platform helps venue owners easily list their spaces, reach thousands of hosts, and manage bookings for any type of event.
-        </p>
+BookMyVenue connects people with local venues for events, meetups, celebrations, and community gatherings through a simple and transparent booking experience.        </p>
         <div className="flex items-center gap-4 flex-wrap">
-          <Link to="/addvenues" className="bg-[#c5a059] hover:bg-[#ab8237] text-white text-sm font-semibold px-5 sm:px-6 py-2.5 sm:py-3 rounded-full transition-colors shadow-sm">
-            Add Your Venue
+          <Link to="/venues" className="bg-[#c5a059] hover:bg-[#ab8237] text-white text-sm font-semibold px-5 sm:px-6 py-2.5 sm:py-3 rounded-full transition-colors shadow-sm">
+            Book Your Venue
           </Link>
-          <Link to="/knowmore" className="text-white text-sm font-bold hover:opacity-80 transition-opacity flex items-center">
-            Know More.
+          <Link to="/mybooking" className="text-white text-sm font-bold hover:opacity-80 transition-opacity flex items-center">
+            My Booking
           </Link>
         </div>
       </div>
