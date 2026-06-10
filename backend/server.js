@@ -2,6 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
+import venueRoutes from './routes/venues.js';
+import bookingRoutes from './routes/bookings.js';
+import reviewRoutes from './routes/reviews.js';
 import pool from './db.js';
 
 // Load environment configurations
@@ -32,6 +35,9 @@ testDbConnection();
 
 // Application Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/venues', venueRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Health Check / Root Endpoint
 app.get('/', (req, res) => {

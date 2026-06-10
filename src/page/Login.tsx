@@ -36,8 +36,12 @@ export default function Login() {
       localStorage.setItem('token', data.token);
 
       setSuccess(true);
+
+      const params = new URLSearchParams(window.location.search);
+      const redirect = params.get('redirect') || '/venues';
+
       setTimeout(() => {
-        navigate('/venues');
+        navigate(redirect);
       }, 1000);
     } catch (err: any) {
       setErrorMsg(err.message || 'Invalid email or password');

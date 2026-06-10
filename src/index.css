@@ -70,3 +70,15 @@ html, body, #root {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* Customize date input calendar picker indicator */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(70%) sepia(28%) saturate(1478%) hue-rotate(351deg) brightness(92%) contrast(85%);
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  filter: invert(85%) sepia(25%) saturate(1500%) hue-rotate(351deg) brightness(105%) contrast(90%);
+  transform: scale(1.15);
+}

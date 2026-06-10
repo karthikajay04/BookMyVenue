@@ -40,21 +40,25 @@ export default function Navbar() {
     };
   }, [menuOpen]);
 
-  const navLinks =
-    user?.role === "venue_owner"
-      ? [
-          { href: "/", label: "Home" },
-          { href: "/my-venues", label: "My Venues" },
-          { href: "/bookings", label: "Bookings" },
-          { href: "/contact", label: "Contact" },
-        ]
-      : [
-          { href: "/", label: "Home" },
-          { href: "/venues", label: "Venues" },
-          
-          { href: "/mybooking", label: "Bookings" },
-          { href: "/contact", label: "Contact" },
-        ];
+  const navLinks = !user
+    ? [
+        { href: "/", label: "Home" },
+        { href: "/venues", label: "Venues" },
+        { href: "/contact", label: "Contact" },
+      ]
+    : user.role === "venue_owner"
+    ? [
+        { href: "/", label: "Home" },
+        { href: "/my-venues", label: "My Venues" },
+        { href: "/bookings", label: "Bookings" },
+        { href: "/contact", label: "Contact" },
+      ]
+    : [
+        { href: "/", label: "Home" },
+        { href: "/venues", label: "Venues" },
+        { href: "/mybooking", label: "Bookings" },
+        { href: "/contact", label: "Contact" },
+      ];
 
   return (
     <>
@@ -76,11 +80,10 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 to={link.href}
-                className={`text-sm px-3 py-2 transition-colors ${
-                  isActive
+                className={`text-sm px-3 py-2 transition-colors ${isActive
                     ? "font-semibold text-[#c5a059]"
                     : "font-medium text-white/70 hover:text-[#c5a059]"
-                }`}
+                  }`}
               >
                 {link.label}
               </Link>
@@ -140,18 +143,16 @@ export default function Navbar() {
             aria-expanded={menuOpen}
           >
             <Menu
-              className={`w-5 h-5 absolute transition-all duration-300 ${
-                menuOpen
+              className={`w-5 h-5 absolute transition-all duration-300 ${menuOpen
                   ? "opacity-0 rotate-90 scale-50"
                   : "opacity-100 rotate-0 scale-100"
-              }`}
+                }`}
             />
             <X
-              className={`w-5 h-5 absolute transition-all duration-300 ${
-                menuOpen
+              className={`w-5 h-5 absolute transition-all duration-300 ${menuOpen
                   ? "opacity-100 rotate-0 scale-100"
                   : "opacity-0 -rotate-90 scale-50"
-              }`}
+                }`}
             />
           </button>
         </div>
@@ -159,11 +160,10 @@ export default function Navbar() {
 
       {/* Mobile menu overlay */}
       <div
-        className={`lg:hidden fixed inset-0 z-20 transition-opacity duration-300 ${
-          menuOpen
+        className={`lg:hidden fixed inset-0 z-20 transition-opacity duration-300 ${menuOpen
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
-        }`}
+          }`}
         onClick={() => setMenuOpen(false)}
       >
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -171,9 +171,8 @@ export default function Navbar() {
 
       {/* Mobile menu drawer */}
       <div
-        className={`lg:hidden fixed top-0 right-0 bottom-0 z-20 w-[85%] max-w-sm bg-black/95 backdrop-blur-xl shadow-2xl transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          menuOpen ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`lg:hidden fixed top-0 right-0 bottom-0 z-20 w-[85%] max-w-sm bg-black/95 backdrop-blur-xl shadow-2xl transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${menuOpen ? "translate-x-0" : "translate-x-full"
+          }`}
       >
         <div className="flex flex-col h-full pt-24 px-8 pb-8">
           <div className="flex flex-col gap-1">
@@ -184,9 +183,8 @@ export default function Navbar() {
                   key={link.href}
                   to={link.href}
                   onClick={() => setMenuOpen(false)}
-                  className={`text-2xl font-semibold py-4 border-b border-white/10 transition-all duration-500 ${
-                    isActive ? "text-[#c5a059]" : "text-white"
-                  } ${menuOpen ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0"}`}
+                  className={`text-2xl font-semibold py-4 border-b border-white/10 transition-all duration-500 ${isActive ? "text-[#c5a059]" : "text-white"
+                    } ${menuOpen ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0"}`}
                   style={{
                     transitionDelay: menuOpen ? `${150 + i * 70}ms` : "0ms",
                   }}
@@ -198,9 +196,8 @@ export default function Navbar() {
           </div>
 
           <div
-            className={`mt-8 flex flex-col gap-4 transition-all duration-500 ${
-              menuOpen ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0"
-            }`}
+            className={`mt-8 flex flex-col gap-4 transition-all duration-500 ${menuOpen ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0"
+              }`}
             style={{ transitionDelay: menuOpen ? "400ms" : "0ms" }}
           >
             {user ? (

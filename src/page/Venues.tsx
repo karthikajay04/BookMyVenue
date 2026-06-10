@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { PlaceCard } from '@/components/ui/card-22';
@@ -13,6 +13,13 @@ const capacityOptions = [
   { value: '1000', label: 'Large (1000+)' },
 ];
 
+const sortOptions = [
+  { value: 'Default', label: 'Default Sorting' },
+  { value: 'PriceAsc', label: 'Price: Low to High' },
+  { value: 'PriceDesc', label: 'Price: High to Low' },
+  { value: 'RatingDesc', label: 'Rating: High to Low' },
+];
+
 export default function Venues() {
   const navigate = useNavigate();
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -20,9 +27,28 @@ export default function Venues() {
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [selectedCapacity, setSelectedCapacity] = useState<string>('All');
   const [capacityDropdownOpen, setCapacityDropdownOpen] = useState<boolean>(false);
+  
+  // Search & Sort States
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('Default');
+  const [sortDropdownOpen, setSortDropdownOpen] = useState<boolean>(false);
 
   useEffect(() => {
-    setVenues(getVenues());
+    const fetchVenues = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/venues');
+        if (response.ok) {
+          const data = await response.json();
+          setVenues(data);
+        } else {
+          setVenues(getVenues());
+        }
+      } catch (err) {
+        console.error('Failed to fetch venues from backend, falling back to local storage:', err);
+        setVenues(getVenues());
+      }
+    };
+    fetchVenues();
   }, []);
 
   // Compute location options dynamically from existing venues
@@ -32,24 +58,37 @@ export default function Venues() {
     ...uniqueCities.map(city => ({ value: city, label: city }))
   ];
 
-  // Filter venues based on selected location and capacity state
-  const filteredVenues = venues.filter((venue) => {
-    const matchesLocation = selectedLocation === 'All' || venue.location === selectedLocation;
+  // Filter and sort venues based on states
+  const filteredAndSortedVenues = venues
+    .filter((venue) => {
+      const matchesLocation = selectedLocation === 'All' || venue.location === selectedLocation;
 
-    let matchesCapacity = true;
-    if (selectedCapacity === '10') {
-      matchesCapacity = venue.capacity <= 10;
-    } else if (selectedCapacity === '100') {
-      matchesCapacity = venue.capacity > 10 && venue.capacity <= 100;
-    } else if (selectedCapacity === '1000') {
-      matchesCapacity = venue.capacity >= 1000;
-    }
+      let matchesCapacity = true;
+      if (selectedCapacity === '10') {
+        matchesCapacity = venue.capacity <= 10;
+      } else if (selectedCapacity === '100') {
+        matchesCapacity = venue.capacity > 10 && venue.capacity <= 100;
+      } else if (selectedCapacity === '1000') {
+        matchesCapacity = venue.capacity >= 1000;
+      }
 
-    return matchesLocation && matchesCapacity;
-  });
+      const matchesSearch = searchQuery.trim() === '' ||
+        venue.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        venue.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        venue.location.toLowerCase().includes(searchQuery.toLowerCase());
+
+      return matchesLocation && matchesCapacity && matchesSearch;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'PriceAsc') return a.pricePerNight - b.pricePerNight;
+      if (sortBy === 'PriceDesc') return b.pricePerNight - a.pricePerNight;
+      if (sortBy === 'RatingDesc') return Number(b.rating) - Number(a.rating);
+      return 0; // Default
+    });
 
   const activeLocationOption = locationOptions.find((opt) => opt.value === selectedLocation) || locationOptions[0];
   const activeCapacityOption = capacityOptions.find((opt) => opt.value === selectedCapacity) || capacityOptions[0];
+  const activeSortOption = sortOptions.find((opt) => opt.value === sortBy) || sortOptions[0];
 
   return (
     <section
@@ -85,6 +124,20 @@ export default function Venues() {
           </p>
         </div>
 
+        {/* Search Bar Input */}
+        <div className="relative w-full max-w-lg mb-8 z-30">
+          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+            <Search className="w-5 h-5 text-white/40" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search venues by title, description, or location..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-6 py-3.5 bg-black/60 hover:bg-black/80 focus:bg-black/90 border border-white/10 focus:border-[#c5a059]/50 rounded-full text-white text-sm focus:outline-none transition-all duration-300 shadow-md placeholder-white/30"
+          />
+        </div>
+
         {/* Filter Dropdowns Container */}
         <div className="flex flex-wrap items-center justify-center gap-6 mb-16 z-30">
 
@@ -94,6 +147,7 @@ export default function Venues() {
               onClick={() => {
                 setDropdownOpen((prev) => !prev);
                 setCapacityDropdownOpen(false);
+                setSortDropdownOpen(false);
               }}
               className="flex items-center justify-between gap-4 px-6 py-3 min-w-[220px] bg-black/60 hover:bg-black/80 border border-white/10 rounded-full text-white text-sm font-semibold shadow-md transition-all duration-300 active:scale-[0.98]"
               aria-label="Filter locations dropdown"
@@ -136,6 +190,7 @@ export default function Venues() {
               onClick={() => {
                 setCapacityDropdownOpen((prev) => !prev);
                 setDropdownOpen(false);
+                setSortDropdownOpen(false);
               }}
               className="flex items-center justify-between gap-4 px-6 py-3 min-w-[220px] bg-black/60 hover:bg-black/80 border border-white/10 rounded-full text-white text-sm font-semibold shadow-md transition-all duration-300 active:scale-[0.98]"
               aria-label="Filter capacities dropdown"
@@ -171,11 +226,55 @@ export default function Venues() {
               </>
             )}
           </div>
+
+          {/* Sort Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setSortDropdownOpen((prev) => !prev);
+                setDropdownOpen(false);
+                setCapacityDropdownOpen(false);
+              }}
+              className="flex items-center justify-between gap-4 px-6 py-3 min-w-[220px] bg-black/60 hover:bg-black/80 border border-white/10 rounded-full text-white text-sm font-semibold shadow-md transition-all duration-300 active:scale-[0.98]"
+              aria-label="Sort venues dropdown"
+              aria-expanded={sortDropdownOpen}
+            >
+              <span>{activeSortOption.label}</span>
+              <ChevronDown className={`w-4 h-4 text-[#c5a059] transition-transform duration-300 ${sortDropdownOpen ? 'rotate-180' : 'rotate-0'}`} />
+            </button>
+
+            {sortDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-20 bg-transparent" onClick={() => setSortDropdownOpen(false)} />
+                <div className="absolute top-full left-0 right-0 mt-2 bg-[#0d0d11]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden py-1 z-30 animate-in fade-in slide-in-from-top-2 duration-200">
+                  {sortOptions.map((option) => {
+                    const isActive = sortBy === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setSortBy(option.value);
+                          setSortDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-5 py-3 text-sm transition-colors duration-200 ${isActive
+                          ? 'bg-[#c5a059] text-white font-semibold'
+                          : 'text-white/80 hover:text-white hover:bg-white/5'
+                          }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+
         </div>
 
         {/* Venue Grid (Filtered Venues) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 justify-items-center w-full max-w-4xl pb-12">
-          {filteredVenues.map((venue, idx) => (
+          {filteredAndSortedVenues.map((venue, idx) => (
             <PlaceCard
               key={idx}
               images={venue.images}
@@ -193,9 +292,9 @@ export default function Venues() {
               onClick={() => navigate('/venue/' + venue.id)}
             />
           ))}
-          {filteredVenues.length === 0 && (
+          {filteredAndSortedVenues.length === 0 && (
             <div className="col-span-1 md:col-span-2 text-center text-white/50 py-12">
-              No venues match your location and capacity criteria.
+              No venues match your location, capacity, or search criteria.
             </div>
           )}
         </div>

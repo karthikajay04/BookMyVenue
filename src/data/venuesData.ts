@@ -91,3 +91,16 @@ export const addVenue = (venue: Venue) => {
   const updated = [...current, venue];
   localStorage.setItem('bookmyvenue_data', JSON.stringify(updated));
 };
+
+export const updateVenueInLocalStorage = (id: string, updatedVenue: Partial<Venue>) => {
+  const current = getVenues();
+  const updated = current.map(v => v.id === id ? { ...v, ...updatedVenue } : v);
+  localStorage.setItem('bookmyvenue_data', JSON.stringify(updated));
+};
+
+export const deleteVenueFromLocalStorage = (id: string) => {
+  const current = getVenues();
+  const updated = current.filter(v => v.id !== id);
+  localStorage.setItem('bookmyvenue_data', JSON.stringify(updated));
+};
+

@@ -7,6 +7,8 @@ import Signup from './page/Signup';
 import VenueDetail from './page/VenueDetail';
 import AddVenue from './page/AddVenue';
 import Bookings from './page/UserBookings';
+import MyVenues from './page/MyVenues';
+import HostBookings from './page/HostBookings';
 
 function App() {
   return (
@@ -16,6 +18,8 @@ function App() {
         <Route path="/venues" element={<Venues />} />
         <Route path="/venue/:id" element={<VenueDetail />} />
         <Route path="/addvenues" element={<AddVenue />} />
+        <Route path="/my-venues" element={<MyVenues />} />
+        <Route path="/bookings" element={<HostBookings />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />

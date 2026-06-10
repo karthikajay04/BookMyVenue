@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Calendar, 
-  MapPin, 
-  Users, 
-  CheckCircle2, 
-  Clock, 
-  XCircle, 
-  ArrowRight, 
-  Info, 
-  Star, 
+import {
+  Calendar,
+  MapPin,
+  Users,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  ArrowRight,
+  Info,
+  Star,
   Trash2,
   Phone,
   Mail,
@@ -58,9 +58,6 @@ export interface PlaceCardProps {
   onClick?: () => void;
 }
 
-<Navbar/>
-
-
 
 // ============================================================================
 // --- FILE: src/components/ui/PlaceCard.tsx ---
@@ -93,14 +90,14 @@ export function PlaceCard({
   };
 
   return (
-    <div 
+    <div
       onClick={onClick}
       className={`group relative rounded-3xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-md shadow-2xl transition-all duration-500 hover:border-[#c5a059]/40 cursor-pointer ${className}`}
     >
       {/* Visual media gallery wrapper */}
       <div className="relative h-64 overflow-hidden">
-        <img 
-          src={images[activeImgIndex]} 
+        <img
+          src={images[activeImgIndex]}
           alt={title}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -111,14 +108,14 @@ export function PlaceCard({
         {/* Carousel controls if multi-image */}
         {images.length > 1 && (
           <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <button 
+            <button
               type="button"
               onClick={prevImage}
               className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-sm border border-white/10"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <button 
+            <button
               type="button"
               onClick={nextImage}
               className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-sm border border-white/10"
@@ -128,24 +125,7 @@ export function PlaceCard({
           </div>
         )}
 
-        {/* Overlay Tags */}
-        <div className="absolute top-4 left-4 right-4 flex justify-between items-start gap-2">
-          <div className="flex flex-wrap gap-1.5">
-            {tags.map((tag, i) => (
-              <span 
-                key={i} 
-                className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-bold tracking-wider uppercase text-[#c5a059] border border-[#c5a059]/20"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-          {isTopRated && (
-            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#c5a059] text-black text-[10px] font-extrabold tracking-wider uppercase shadow-lg shadow-[#c5a059]/10">
-              <Sparkles className="w-3 h-3 fill-black" /> Top Choice
-            </span>
-          )}
-        </div>
+
 
         {/* Backdrop bottom gradient */}
         <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/80 to-transparent" />
@@ -268,8 +248,10 @@ const initialBookings: Booking[] = [
 // --- FILE: src/pages/Bookings.tsx (Main Dashboard) ---
 // ============================================================================
 export default function Bookings(): React.JSX.Element {
-  const [bookings, setBookings] = useState<Booking[]>(initialBookings);
-  
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
+
   // Custom dialog state handlers
   const [ticketModalBooking, setTicketModalBooking] = useState<Booking | null>(null);
   const [cancelTargetBooking, setCancelTargetBooking] = useState<Booking | null>(null);
@@ -277,6 +259,41 @@ export default function Bookings(): React.JSX.Element {
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [reviewText, setReviewText] = useState<string>('');
   const [successToast, setSuccessToast] = useState<string>('');
+
+  useEffect(() => {
+    const fetchBookings = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setIsLoading(false);
+        setErrorMsg('Please login to view your bookings.');
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setErrorMsg('');
+        const response = await fetch('http://localhost:5000/api/bookings', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setBookings(data);
+        } else {
+          setErrorMsg('Failed to load bookings.');
+        }
+      } catch (err) {
+        console.error('Failed to load bookings from API:', err);
+        setErrorMsg('Failed to connect to the booking service.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBookings();
+  }, []);
 
   // Auto-dismiss toast alert
   useEffect(() => {
@@ -288,29 +305,86 @@ export default function Bookings(): React.JSX.Element {
     }
   }, [successToast]);
 
-  const handleConfirmCancel = (): void => {
+  const handleConfirmCancel = async () => {
     if (!cancelTargetBooking) return;
-    
-    setBookings((prev) => 
-      prev.map((b) => 
-        b.id === cancelTargetBooking.id 
-          ? { ...b, status: 'cancelled', paymentStatus: 'refunded' } 
-          : b
-      )
-    );
-    
-    setSuccessToast(`Successfully cancelled booking ${cancelTargetBooking.id}. Refund process initiated.`);
-    setCancelTargetBooking(null);
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/bookings/${cancelTargetBooking.id}/cancel`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to cancel booking');
+      }
+
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === cancelTargetBooking.id
+            ? { ...b, status: 'cancelled', paymentStatus: 'refunded' }
+            : b
+        )
+      );
+
+      setSuccessToast(`Successfully cancelled booking ${cancelTargetBooking.id}. Refund process initiated.`);
+    } catch (err: any) {
+      console.error('Cancellation error:', err);
+      alert(err.message || 'Failed to cancel booking. Please try again.');
+    } finally {
+      setCancelTargetBooking(null);
+    }
   };
 
-  const handlePublishReview = (e: React.FormEvent<HTMLFormElement>): void => {
+  const handlePublishReview = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!reviewTargetBooking) return;
 
-    setSuccessToast(`Review published successfully for ${reviewTargetBooking.venueTitle}! Thank you for your feedback.`);
-    setReviewTargetBooking(null);
-    setReviewRating(5);
-    setReviewText('');
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const response = await fetch('http://localhost:5000/api/reviews', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          venueId: reviewTargetBooking.venueId,
+          bookingId: reviewTargetBooking.id,
+          rating: reviewRating,
+          reviewText: reviewText
+        })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to publish review');
+      }
+
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === reviewTargetBooking.id
+            ? { ...b, status: 'completed' }
+            : b
+        )
+      );
+
+      setSuccessToast(`Review published successfully for ${reviewTargetBooking.venueTitle}! Thank you for your feedback.`);
+    } catch (err: any) {
+      console.error('Review error:', err);
+      alert(err.message || 'Failed to publish review. Please try again.');
+    } finally {
+      setReviewTargetBooking(null);
+      setReviewRating(5);
+      setReviewText('');
+    }
   };
 
   const formatPrice = (price: number): string => {
@@ -343,7 +417,7 @@ export default function Bookings(): React.JSX.Element {
   };
 
   return (
-    
+
     <section
       className="relative w-full min-h-screen text-white pt-10 pb-24 overflow-y-auto font-sans"
       style={{
@@ -360,7 +434,7 @@ export default function Bookings(): React.JSX.Element {
 
       {/* Main Container */}
       <div className="relative z-20 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-24">
-        
+
         {/* Toast Alert Banner */}
         {successToast && (
           <div className="fixed bottom-6 right-6 z-50 max-w-md bg-zinc-900/95 border-l-4 border-[#c5a059] text-white p-4 rounded-r-xl shadow-2xl flex items-start gap-3 animate-in fade-in slide-in-from-bottom-5 duration-300 backdrop-blur-md">
@@ -369,9 +443,9 @@ export default function Bookings(): React.JSX.Element {
               <p className="text-sm font-semibold">Action Confirmed</p>
               <p className="text-xs text-white/70 mt-1">{successToast}</p>
             </div>
-            <button 
+            <button
               type="button"
-              onClick={() => setSuccessToast('')} 
+              onClick={() => setSuccessToast('')}
               className="text-white/40 hover:text-white text-xs px-1"
             >
               ✕
@@ -383,9 +457,9 @@ export default function Bookings(): React.JSX.Element {
         <div className="text-center mb-16">
           <h1
             className="font-normal leading-[0.95] text-white text-[2.5rem] sm:text-5xl md:text-6xl tracking-tight"
-            style={{ 
-              fontFamily: "'Neue Haas Grotesk Display Pro 55 Roman', 'Neue Haas Grotesk Text Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif", 
-              letterSpacing: '-0.035em' 
+            style={{
+              fontFamily: "'Neue Haas Grotesk Display Pro 55 Roman', 'Neue Haas Grotesk Text Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+              letterSpacing: '-0.035em'
             }}
           >
             My <span className="text-[#c5a059]">Bookings</span>
@@ -397,120 +471,22 @@ export default function Bookings(): React.JSX.Element {
 
         {/* Bookings List mapping to PlaceCard */}
         <div className="space-y-12">
-          {bookings.map((booking) => {
-            const isUpcoming = booking.status === 'upcoming';
-            const isCompleted = booking.status === 'completed';
-            const isCancelled = booking.status === 'cancelled';
-
-            return (
-              <div 
-                key={booking.id}
-                className="bg-black/40 backdrop-blur-md border border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl transition-all duration-300 hover:border-[#c5a059]/20"
-              >
-                {/* Embedded Native Card Component */}
-                <PlaceCard
-                  images={[booking.venueImage]}
-                  tags={[
-                    booking.status.toUpperCase(),
-                    `${booking.guests} Guests Maximum`
-                  ]}
-                  rating={4.9}
-                  title={booking.venueTitle}
-                  dateRange={`${formatDateString(booking.startDate)} to ${formatDateString(booking.endDate)}`}
-                  hostType="Verified Elite Host"
-                  isTopRated={isUpcoming}
-                  description={booking.checkInInstructions}
-                  pricePerNight={Math.round(booking.totalPrice / 2)}
-                  capacity={booking.guests}
-                  eventTypes={['Celebration', 'Gatherative']}
-                  className="border-none bg-transparent shadow-none hover:border-transparent p-0"
-                />
-
-                {/* Unified Booking Action Bar under the Card */}
-                <div className="mt-6 pt-6 border-t border-white/5 flex flex-wrap items-center justify-between gap-4">
-                  {/* Status Indicator */}
-                  <div className="flex flex-col gap-1">
-                    <div className="text-xs">
-                      {isUpcoming && (
-                        <div className="flex items-center gap-1.5 text-emerald-400">
-                          
-                          
-                        </div>
-                      )}
-                      {isCompleted && (
-                        <span className="text-white/40 flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-[#c5a059]" /> Hope you enjoyed your stay!
-                        </span>
-                      )}
-                      {isCancelled && (
-                        <span className="text-red-400/80 flex items-center gap-1.5 font-medium">
-                          <XCircle className="w-3.5 h-3.5" /> Stay Cancelled & Refund Processed
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Booking Specific Interaction Button Matrix */}
-                  <div className="flex flex-wrap items-center gap-3">
-                    {/* Active reservation interactions */}
-                    {isUpcoming && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setCancelTargetBooking(booking)}
-                          className="px-5 py-2.5 text-xs font-semibold tracking-wider text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-full border border-red-500/20 transition-all duration-300 active:scale-[0.98]"
-                        >
-                          Cancel Stay
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setTicketModalBooking(booking)}
-                          className="flex items-center gap-2 px-6 py-2.5 text-xs font-semibold tracking-wider bg-[#c5a059] text-black hover:bg-[#ebd5a7] rounded-full shadow-lg transition-all duration-300 active:scale-[0.98]"
-                        >
-                          <CreditCard className="w-3.5 h-3.5" /> Payment Details
-                        </button>
-                      </>
-                    )}
-
-                    {/* Past reservation interactions */}
-                    {isCompleted && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setTicketModalBooking(booking)}
-                          className="px-5 py-2.5 text-xs font-semibold text-white/70 hover:text-white border border-white/10 hover:border-white/20 rounded-full transition-all"
-                        >
-                          Receipt
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setReviewTargetBooking(booking)}
-                          className="flex items-center gap-2 px-6 py-2.5 text-xs font-semibold tracking-wider bg-[#c5a059] text-black hover:bg-[#ebd5a7] rounded-full shadow-lg transition-all duration-300 active:scale-[0.98]"
-                        >
-                          <Star className="w-3.5 h-3.5" /> Write Review
-                        </button>
-                      </>
-                    )}
-
-                    {/* Cancelled reservation option */}
-                    {isCancelled && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSuccessToast("Re-booking slot coordinates for " + booking.venueTitle + "...");
-                        }}
-                        className="px-6 py-2.5 text-xs font-semibold text-[#c5a059] border border-[#c5a059]/30 hover:bg-[#c5a059]/10 rounded-full transition-all"
-                      >
-                        Rebook Venue
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {bookings.length === 0 && (
+          {isLoading ? (
+            <div className="text-center py-24 bg-black/20 border border-white/5 rounded-3xl max-w-2xl mx-auto">
+              <div className="w-12 h-12 border-4 border-[#c5a059] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-white/60">Loading your bookings...</p>
+            </div>
+          ) : errorMsg ? (
+            <div className="text-center py-24 bg-black/20 border border-white/5 rounded-3xl max-w-2xl mx-auto px-6">
+              <Info className="w-8 h-8 text-[#c5a059] mx-auto mb-4" />
+              <p className="text-white/80 font-semibold mb-2">{errorMsg}</p>
+              {errorMsg.toLowerCase().includes('login') && (
+                <Link to="/login?redirect=/mybooking" className="inline-block mt-4 px-6 py-2.5 bg-[#c5a059] hover:bg-[#ab8237] text-[#0a0a0c] font-bold rounded-full text-xs transition-all shadow-md">
+                  Login Now
+                </Link>
+              )}
+            </div>
+          ) : bookings.length === 0 ? (
             <div className="text-center py-24 bg-black/20 border border-white/5 rounded-3xl max-w-2xl mx-auto">
               <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
                 <Info className="w-6 h-6 text-[#c5a059]/60" />
@@ -520,6 +496,119 @@ export default function Bookings(): React.JSX.Element {
                 You currently don't have any bookings listed under your account.
               </p>
             </div>
+          ) : (
+            bookings.map((booking) => {
+              const isUpcoming = booking.status === 'upcoming';
+              const isCompleted = booking.status === 'completed';
+              const isCancelled = booking.status === 'cancelled';
+
+              return (
+                <div
+                  key={booking.id}
+                  className="bg-black/40 backdrop-blur-md border border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl transition-all duration-300 hover:border-[#c5a059]/20"
+                >
+                  {/* Embedded Native Card Component */}
+                  <PlaceCard
+                    images={[booking.venueImage]}
+                    tags={[
+                      booking.status.toUpperCase(),
+                      `${booking.guests} Guests Maximum`
+                    ]}
+                    rating={4.9}
+                    title={booking.venueTitle}
+                    dateRange={`${formatDateString(booking.startDate)} to ${formatDateString(booking.endDate)}`}
+                    hostType="Verified Elite Host"
+                    isTopRated={isUpcoming}
+                    description={booking.checkInInstructions}
+                    pricePerNight={Math.round(booking.totalPrice / 2)}
+                    capacity={booking.guests}
+                    eventTypes={['Celebration', 'Gatherative']}
+                    className="border-none bg-transparent shadow-none hover:border-transparent p-0"
+                  />
+
+                  {/* Unified Booking Action Bar under the Card */}
+                  <div className="mt-6 pt-6 border-t border-white/5 flex flex-wrap items-center justify-between gap-4">
+                    {/* Status Indicator */}
+                    <div className="flex flex-col gap-1">
+                      <div className="text-xs">
+                        {isUpcoming && (
+                          <div className="flex items-center gap-1.5 text-emerald-400">
+
+
+                          </div>
+                        )}
+                        {isCompleted && (
+                          <span className="text-white/40 flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[#c5a059]" /> Hope you enjoyed your stay!
+                          </span>
+                        )}
+                        {isCancelled && (
+                          <span className="text-red-400/80 flex items-center gap-1.5 font-medium">
+                            <XCircle className="w-3.5 h-3.5" /> Stay Cancelled & Refund Processed
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Booking Specific Interaction Button Matrix */}
+                    <div className="flex flex-wrap items-center gap-3">
+                      {/* Active reservation interactions */}
+                      {isUpcoming && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setCancelTargetBooking(booking)}
+                            className="px-5 py-2.5 text-xs font-semibold tracking-wider text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-full border border-red-500/20 transition-all duration-300 active:scale-[0.98]"
+                          >
+                            Cancel Stay
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTicketModalBooking(booking)}
+                            className="flex items-center gap-2 px-6 py-2.5 text-xs font-semibold tracking-wider bg-[#c5a059] text-black hover:bg-[#ebd5a7] rounded-full shadow-lg transition-all duration-300 active:scale-[0.98]"
+                          >
+                            <CreditCard className="w-3.5 h-3.5" /> Payment Details
+                          </button>
+                        </>
+                      )}
+
+                      {/* Past reservation interactions */}
+                      {isCompleted && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setTicketModalBooking(booking)}
+                            className="px-5 py-2.5 text-xs font-semibold text-white/70 hover:text-white border border-white/10 hover:border-white/20 rounded-full transition-all"
+                          >
+                            Receipt
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setReviewTargetBooking(booking)}
+                            className="flex items-center gap-2 px-6 py-2.5 text-xs font-semibold tracking-wider bg-[#c5a059] text-black hover:bg-[#ebd5a7] rounded-full shadow-lg transition-all duration-300 active:scale-[0.98]"
+                          >
+                            <Star className="w-3.5 h-3.5" /> Write Review
+                          </button>
+                        </>
+                      )}
+
+                      {/* Cancelled reservation option */}
+                      {isCancelled && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSuccessToast("Re-booking slot coordinates for " + booking.venueTitle + "...");
+                          }}
+                          className="px-6 py-2.5 text-xs font-semibold text-[#c5a059] border border-[#c5a059]/30 hover:bg-[#c5a059]/10 rounded-full transition-all"
+                        >
+                          Rebook Venue
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       </div>
@@ -531,7 +620,7 @@ export default function Bookings(): React.JSX.Element {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
           <div className="absolute inset-0 bg-black/85 backdrop-blur-md" onClick={() => setTicketModalBooking(null)} />
-          
+
           {/* Modal Box */}
           <div className="relative bg-[#0d0d11] border border-white/10 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-200">
             {/* Header */}
@@ -540,7 +629,7 @@ export default function Bookings(): React.JSX.Element {
                 <span className="text-[10px] uppercase tracking-widest text-[#c5a059] font-mono">Invoice Summary</span>
                 <h4 className="text-lg font-semibold text-white mt-1">{ticketModalBooking.venueTitle}</h4>
               </div>
-              <button 
+              <button
                 type="button"
                 onClick={() => setTicketModalBooking(null)}
                 className="text-white/40 hover:text-white transition-colors text-xl p-1"
@@ -553,7 +642,7 @@ export default function Bookings(): React.JSX.Element {
             <div className="p-6 space-y-6">
               {/* Payment Split Timeline Progress View */}
               <div className="bg-zinc-900/60 border border-white/5 rounded-2xl p-5 space-y-4">
-                
+
 
                 <div className="pt-3 border-t border-white/5 flex justify-between items-center text-sm">
                   <span className="text-white/60 font-medium">Total Agreed Cost</span>
@@ -624,7 +713,7 @@ export default function Bookings(): React.JSX.Element {
       {cancelTargetBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/85 backdrop-blur-md" onClick={() => setCancelTargetBooking(null)} />
-          
+
           <div className="relative bg-[#0d0d11] border border-white/10 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-200">
             <div className="p-6 text-center space-y-4">
               <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto">
@@ -671,7 +760,7 @@ export default function Bookings(): React.JSX.Element {
       {reviewTargetBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setReviewTargetBooking(null)} />
-          
+
           <div className="relative bg-[#0d0d11] border border-white/10 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-200">
             {/* Header */}
             <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#13131a]">
@@ -679,7 +768,7 @@ export default function Bookings(): React.JSX.Element {
                 <span className="text-[10px] uppercase tracking-widest text-[#c5a059] font-mono">Feedback System</span>
                 <h4 className="text-lg font-semibold text-white mt-1">Review Your Experience</h4>
               </div>
-              <button 
+              <button
                 type="button"
                 onClick={() => setReviewTargetBooking(null)}
                 className="text-white/40 hover:text-white transition-colors text-xl p-1"
@@ -710,12 +799,11 @@ export default function Bookings(): React.JSX.Element {
                           onClick={() => setReviewRating(starValue)}
                           className="p-1 focus:outline-none transform hover:scale-125 transition-transform"
                         >
-                          <Star 
-                            className={`w-8 h-8 transition-colors ${
-                              isHighlighted 
-                                ? 'fill-[#c5a059] text-[#c5a059] drop-shadow-[0_0_6px_rgba(197,160,89,0.3)]' 
-                                : 'text-white/20 hover:text-white/50'
-                            }`} 
+                          <Star
+                            className={`w-8 h-8 transition-colors ${isHighlighted
+                              ? 'fill-[#c5a059] text-[#c5a059] drop-shadow-[0_0_6px_rgba(197,160,89,0.3)]'
+                              : 'text-white/20 hover:text-white/50'
+                              }`}
                           />
                         </button>
                       );

@@ -166,7 +166,7 @@ export default function AddVenue() {
     };
 
     // Form submit handler
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validateForm()) {
             return;
@@ -203,7 +203,52 @@ export default function AddVenue() {
             eventTypes: selectedEventTypes
         };
 
-        // Add to localStorage
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                const response = await fetch('http://localhost:5000/api/venues', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        title,
+                        description,
+                        location,
+                        full_address: fullAddress,
+                        capacity: Number(capacity),
+                        square_feet: Number(squareFeet),
+                        price_per_night: Number(pricePerNight),
+                        host_type: hostType,
+                        rating,
+                        is_top_rated: isTopRated,
+                        date_range: dateRange,
+                        parking,
+                        catering,
+                        images: imageUrls,
+                        amenities: selectedAmenities,
+                        rules,
+                        event_types: selectedEventTypes
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.venue && data.venue.id) {
+                        setNewVenueId(data.venue.id);
+                    } else {
+                        setNewVenueId(generatedId);
+                    }
+                    setActiveStep('success');
+                    return;
+                }
+            } catch (err) {
+                console.error('Failed submitting venue listing to backend, falling back:', err);
+            }
+        }
+
+        // Add to localStorage fallback
         addVenue(newVenue);
         setNewVenueId(generatedId);
         setActiveStep('success');
