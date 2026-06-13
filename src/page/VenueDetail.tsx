@@ -24,6 +24,59 @@ export default function VenueDetail() {
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
   const [bookingError, setBookingError] = useState('');
 
+  // Renter contact details
+  const [renterName, setRenterName] = useState('');
+  const [renterPhone, setRenterPhone] = useState('');
+  const [renterEmail, setRenterEmail] = useState('');
+
+  // Date limit helpers for web bookings (only allowed within 30 days)
+  const todayStr = new Date().toISOString().split('T')[0];
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + 30);
+  const maxDateStr = maxDate.toISOString().split('T')[0];
+
+  const getBookingDatesError = () => {
+    if (!checkIn || !checkOut) return '';
+    const start = new Date(checkIn);
+    const end = new Date(checkOut);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
+    const limit = new Date(today);
+    limit.setDate(today.getDate() + 30);
+    limit.setHours(23, 59, 59, 999);
+
+    if (start < today) {
+      return 'Check-in date cannot be in the past.';
+    }
+    if (end < start) {
+      return 'Check-out date must be after check-in date.';
+    }
+    if (start > limit || end > limit) {
+      const formattedLimit = limit.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return `Website bookings are only available for dates within the next 30 days (up to ${formattedLimit}). For future dates, please contact the venue owner for an offline booking.`;
+    }
+    return '';
+  };
+
+  const bookingDatesError = getBookingDatesError();
+
+  // Pre-fill user details from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const userObj = JSON.parse(userStr);
+        setRenterName(userObj.name || '');
+        setRenterEmail(userObj.email || '');
+      } catch (e) {
+        console.error('Failed to parse user details for booking pre-fill:', e);
+      }
+    }
+  }, []);
+
   // Fetch the requested venue dynamically
   useEffect(() => {
     const fetchVenue = async () => {
@@ -111,6 +164,11 @@ export default function VenueDetail() {
       return;
     }
 
+    if (!renterName || !renterPhone || !renterEmail) {
+      setBookingError('Please enter your name, phone number, and email address.');
+      return;
+    }
+
     try {
       setIsSubmittingBooking(true);
       setBookingError('');
@@ -126,7 +184,10 @@ export default function VenueDetail() {
           startDate: checkIn,
           endDate: checkOut,
           guests: venue.capacity, // default to venue capacity
-          totalPrice: totalPrice
+          totalPrice: totalPrice,
+          renterName,
+          renterPhone,
+          renterEmail
         })
       });
 
@@ -522,6 +583,8 @@ export default function VenueDetail() {
           <input 
             type="date" 
             value={checkIn}
+            min={todayStr}
+            max={maxDateStr}
             onChange={(e) => setCheckIn(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
           />
@@ -532,10 +595,25 @@ export default function VenueDetail() {
           <input 
             type="date" 
             value={checkOut}
+            min={checkIn || todayStr}
+            max={maxDateStr}
             onChange={(e) => setCheckOut(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
           />
         </div>
+      </div>
+
+      {bookingDatesError && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl p-3.5 leading-relaxed font-light">
+          {bookingDatesError}
+        </div>
+      )}
+
+      <div className="bg-[#c5a059]/5 border border-[#c5a059]/10 text-white/70 text-[11px] rounded-xl p-3 flex items-start gap-2 leading-relaxed">
+        <Info className="w-4 h-4 text-[#c5a059] flex-shrink-0 mt-0.5" />
+        <span>
+          <strong>Booking Window Limit:</strong> Only bookings scheduled within the next 30 days are accepted online. Other bookings can be arranged offline by contacting the host.
+        </span>
       </div>
 
       <div className="flex items-center gap-3 pt-2">
@@ -546,7 +624,7 @@ export default function VenueDetail() {
           Back
         </Button>
         <Button
-          disabled={!checkIn || !checkOut}
+          disabled={!checkIn || !checkOut || !!bookingDatesError}
           onClick={() => setBookingStep('payment')}
           className="flex-1 bg-[#c5a059] hover:bg-[#b08e4d] disabled:opacity-40 disabled:hover:bg-[#c5a059] text-black font-semibold rounded-xl text-xs h-11 transition-all"
         >
@@ -575,6 +653,42 @@ export default function VenueDetail() {
       <hr className="border-white/10" />
 
       <div className="space-y-3">
+        {/* Renter Contact details */}
+        <div className="space-y-1">
+          <label className="text-[10px] text-white/40 uppercase tracking-widest block">Your Full Name *</label>
+          <input 
+            type="text" 
+            value={renterName}
+            onChange={(e) => setRenterName(e.target.value)}
+            placeholder="John Doe"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-[10px] text-white/40 uppercase tracking-widest block">Phone Number *</label>
+            <input 
+              type="tel" 
+              value={renterPhone}
+              onChange={(e) => setRenterPhone(e.target.value)}
+              placeholder="e.g. +1 555-0199"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] text-white/40 uppercase tracking-widest block">Email Address *</label>
+            <input 
+              type="email" 
+              value={renterEmail}
+              onChange={(e) => setRenterEmail(e.target.value)}
+              placeholder="e.g. john@example.com"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
+            />
+          </div>
+        </div>
+
+        <hr className="border-white/10 my-2" />
+
         <div className="space-y-1">
           <label className="text-[10px] text-white/40 uppercase tracking-widest block">Cardholder Name</label>
           <input 
@@ -623,9 +737,9 @@ export default function VenueDetail() {
           Back
         </Button>
         <Button
-          disabled={isSubmittingBooking}
+          disabled={isSubmittingBooking || !renterName || !renterPhone || !renterEmail}
           onClick={handleAuthorizePayment}
-          className="flex-1 bg-[#c5a059] hover:bg-[#b08e4d] text-black font-semibold rounded-xl text-xs h-11 flex items-center justify-center gap-2"
+          className="flex-1 bg-[#c5a059] hover:bg-[#b08e4d] disabled:opacity-40 disabled:hover:bg-[#c5a059] text-black font-semibold rounded-xl text-xs h-11 flex items-center justify-center gap-2"
         >
           {isSubmittingBooking ? (
             <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />

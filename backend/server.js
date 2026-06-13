@@ -26,6 +26,15 @@ const testDbConnection = async () => {
   try {
     const res = await pool.query('SELECT NOW()');
     console.log(`Successfully reached PostgreSQL: ${res.rows[0].now}`);
+    
+    // Ensure bookings table has name, phone and email columns
+    await pool.query(`
+      ALTER TABLE bookings 
+      ADD COLUMN IF NOT EXISTS renter_name VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS renter_phone VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS renter_email VARCHAR(255);
+    `);
+    console.log('Database migrations verified: renter_name, renter_phone, and renter_email columns exist in bookings.');
   } catch (err) {
     console.error('Critical Error: Failed to connect to PostgreSQL database during startup!', err.message);
     console.log('Ensure that your PostgreSQL server is active and the DATABASE_URL in backend/.env is correct.');

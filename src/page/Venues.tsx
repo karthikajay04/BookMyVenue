@@ -281,7 +281,6 @@ export default function Venues() {
               tags={venue.tags}
               rating={venue.rating}
               title={venue.title}
-              dateRange={venue.dateRange}
               hostType={venue.hostType}
               isTopRated={venue.isTopRated}
               description={venue.description}

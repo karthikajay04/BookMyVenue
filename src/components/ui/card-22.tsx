@@ -11,7 +11,6 @@ interface PlaceCardProps {
   tags: string[];
   rating: number;
   title: string;
-  dateRange: string;
   hostType: string;
   isTopRated?: boolean;
   description: string;
@@ -27,7 +26,6 @@ export const PlaceCard = ({
   tags,
   rating,
   title,
-  dateRange,
   hostType,
   isTopRated = false,
   description,

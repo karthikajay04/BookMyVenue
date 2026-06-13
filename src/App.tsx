@@ -9,6 +9,7 @@ import AddVenue from './page/AddVenue';
 import Bookings from './page/UserBookings';
 import MyVenues from './page/MyVenues';
 import HostBookings from './page/HostBookings';
+import HostDashboard from './page/HostDashboard';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <Route path="/addvenues" element={<AddVenue />} />
         <Route path="/my-venues" element={<MyVenues />} />
         <Route path="/bookings" element={<HostBookings />} />
+        <Route path="/dashboard" element={<HostDashboard />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />

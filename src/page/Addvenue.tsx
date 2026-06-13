@@ -52,7 +52,6 @@ export default function AddVenue() {
     const [capacity, setCapacity] = useState<number>(0);
     const [squareFeet, setSquareFeet] = useState<number>(0);
     const [pricePerNight, setPricePerNight] = useState<number>(0);
-    const [dateRange, setDateRange] = useState('Jun 12 - 18');
     const [hostType, setHostType] = useState('Superhost');
     const [rating] = useState<number>(4.9);
     const [isTopRated, setIsTopRated] = useState(true);
@@ -189,7 +188,7 @@ export default function AddVenue() {
             capacity,
             rating,
             title,
-            dateRange,
+            dateRange: 'Available',
             hostType,
             isTopRated,
             description,
@@ -223,7 +222,7 @@ export default function AddVenue() {
                         host_type: hostType,
                         rating,
                         is_top_rated: isTopRated,
-                        date_range: dateRange,
+                        date_range: 'Available',
                         parking,
                         catering,
                         images: imageUrls,
@@ -263,7 +262,6 @@ export default function AddVenue() {
         setCapacity(100);
         setSquareFeet(8500);
         setPricePerNight(450);
-        setDateRange('Jun 12 - 18');
         setHostType('Superhost');
         setIsTopRated(true);
         setImageUrls([
@@ -882,7 +880,6 @@ export default function AddVenue() {
                                         setCapacity(0);
                                         setSquareFeet(0);
                                         setPricePerNight(0);
-                                        setDateRange('Jun 12 - 18');
                                         setImageUrls([MOCK_IMAGES[0], MOCK_IMAGES[1], MOCK_IMAGES[2]]);
                                         setSelectedAmenities(PRESET_AMENITIES);
                                         setSelectedEventTypes(PRESET_EVENT_TYPES);

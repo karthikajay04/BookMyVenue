@@ -30,7 +30,6 @@ export default function MyVenues() {
   const [editCapacity, setEditCapacity] = useState<number>(0);
   const [editSquareFeet, setEditSquareFeet] = useState<number>(0);
   const [editPricePerNight, setEditPricePerNight] = useState<number>(0);
-  const [editDateRange, setEditDateRange] = useState('');
   const [editParking, setEditParking] = useState('');
   const [editCatering, setEditCatering] = useState('');
 
@@ -132,7 +131,6 @@ export default function MyVenues() {
     setEditCapacity(venue.capacity);
     setEditSquareFeet(venue.squareFeet || 0);
     setEditPricePerNight(venue.pricePerNight);
-    setEditDateRange(venue.dateRange || 'Available');
     setEditParking(venue.parking || '');
     setEditCatering(venue.catering || '');
     setEditAmenities(venue.amenities || []);
@@ -165,7 +163,7 @@ export default function MyVenues() {
       capacity: Number(editCapacity),
       squareFeet: Number(editSquareFeet),
       pricePerNight: Number(editPricePerNight),
-      dateRange: editDateRange,
+      dateRange: editingVenue.dateRange || 'Available',
       parking: editParking,
       catering: editCatering,
       images: editImages,
@@ -510,27 +508,15 @@ export default function MyVenues() {
                   </div>
                 </div>
 
-                {/* Row 4: Pricing & Date Range */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Standard Daily Rate ($) *</label>
-                    <input
-                      type="number"
-                      value={editPricePerNight}
-                      onChange={(e) => setEditPricePerNight(Number(e.target.value))}
-                      className="w-full px-4 py-2.5 bg-white/[0.02] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-[#c5a059]/40"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Active Date Range</label>
-                    <input
-                      type="text"
-                      value={editDateRange}
-                      onChange={(e) => setEditDateRange(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-white/[0.02] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-[#c5a059]/40"
-                      placeholder="e.g. Jun 12 - 18"
-                    />
-                  </div>
+                {/* Row 4: Pricing */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Standard Daily Rate ($) *</label>
+                  <input
+                    type="number"
+                    value={editPricePerNight}
+                    onChange={(e) => setEditPricePerNight(Number(e.target.value))}
+                    className="w-full px-4 py-2.5 bg-white/[0.02] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-[#c5a059]/40"
+                  />
                 </div>
 
                 {/* Row 5: Full Address */}
