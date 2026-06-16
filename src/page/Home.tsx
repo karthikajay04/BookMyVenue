@@ -1,6 +1,6 @@
 import { Building2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import BoomerangVideoBg from "../components/BoomerangVideoBg";
+import VideoBg from "../components/VideoBg";
 import Navbar from "../components/Navbar";
 
 import BG_VIDEO from "../assets/video/vd1.mp4";
@@ -10,7 +10,7 @@ function Home() {
   const role = user?.role || "user";
   return (
     <section className="relative w-full min-h-screen sm:h-screen overflow-hidden bg-[#0a0a0c]">
-      <BoomerangVideoBg
+      <VideoBg
         src={BG_VIDEO}
         className="absolute inset-0 w-full h-full"
       />
