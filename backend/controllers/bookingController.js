@@ -27,7 +27,12 @@ export const getBookings = async (req, res) => {
           b.renter_phone AS "renterPhone",
           h.name AS "hostName",
           h.email AS "hostMail",
-          b.check_in_instructions AS "checkInInstructions"
+          b.check_in_instructions AS "checkInInstructions",
+          v.booking_type AS "venueBookingType",
+          v.cleaning_gap AS "venueCleaningGap",
+          v.opening_time AS "venueOpeningTime",
+          v.closing_time AS "venueClosingTime",
+          b.booking_type AS "bookingType"
         FROM bookings b
         JOIN venues v ON b.venue_id = v.id
         JOIN users h ON v.host_email = h.email
@@ -56,7 +61,12 @@ export const getBookings = async (req, res) => {
           b.check_in_instructions AS "checkInInstructions",
           COALESCE(b.renter_name, u.name) AS "renterName",
           b.renter_phone AS "renterPhone",
-          COALESCE(b.renter_email, u.email) AS "renterEmail"
+          COALESCE(b.renter_email, u.email) AS "renterEmail",
+          v.booking_type AS "venueBookingType",
+          v.cleaning_gap AS "venueCleaningGap",
+          v.opening_time AS "venueOpeningTime",
+          v.closing_time AS "venueClosingTime",
+          b.booking_type AS "bookingType"
         FROM bookings b
         JOIN venues v ON b.venue_id = v.id
         JOIN users h ON v.host_email = h.email
@@ -101,15 +111,65 @@ export const createBooking = async (req, res) => {
     maxAllowed.setHours(23, 59, 59, 999);
 
     if (start < today) {
-      return res.status(400).json({ message: 'Check-in date cannot be in the past.' });
+      return res.status(400).json({ message: 'Booking time cannot be in the past.' });
     }
     if (end < start) {
-      return res.status(400).json({ message: 'Check-out date must be after check-in date.' });
+      return res.status(400).json({ message: 'End time must be after start time.' });
     }
     if (start > maxAllowed || end > maxAllowed) {
       const formattedLimit = maxAllowed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       return res.status(400).json({ 
         message: `Web bookings are only allowed for dates within 30 days from today (up to ${formattedLimit}). Please contact the host directly to make an offline booking.` 
+      });
+    }
+
+    // Operating hours check for hours-based booking
+    if (venue.booking_type === 'hours') {
+      const getMinutesOfDay = (d) => d.getHours() * 60 + d.getMinutes();
+      const parseTimeStr = (tStr) => {
+        if (!tStr) return 0;
+        const [h, m] = tStr.split(':').map(Number);
+        return h * 60 + m;
+      };
+
+      const startMinutes = getMinutesOfDay(start);
+      const endMinutes = getMinutesOfDay(end);
+      const openMinutes = parseTimeStr(venue.opening_time || '08:00');
+      const closeMinutes = parseTimeStr(venue.closing_time || '22:00');
+
+      if (startMinutes < openMinutes || endMinutes > closeMinutes) {
+        return res.status(400).json({
+          message: `Booking must be within operating hours: ${venue.opening_time || '08:00'} - ${venue.closing_time || '22:00'}.`
+        });
+      }
+    }
+
+    // Schedule overlap conflict validation
+    const existingBookings = await query(`
+      SELECT start_date, end_date, booking_type FROM bookings 
+      WHERE venue_id = $1 AND status != 'cancelled'
+    `, [venueId]);
+
+    const hasOverlap = existingBookings.rows.some(b => {
+      const bStart = new Date(b.start_date);
+      const bEnd = new Date(b.end_date);
+      
+      if (venue.booking_type === 'hours') {
+        const gapHours = Number(venue.cleaning_gap || 0);
+        const limitNewEnd = new Date(end.getTime() + gapHours * 60 * 60 * 1000);
+        const limitExistingEnd = new Date(bEnd.getTime() + gapHours * 60 * 60 * 1000);
+        
+        return start < limitExistingEnd && bStart < limitNewEnd;
+      } else {
+        return start < bEnd && bStart < end;
+      }
+    });
+
+    if (hasOverlap) {
+      return res.status(400).json({ 
+        message: venue.booking_type === 'hours'
+          ? 'The selected time range conflicts with an existing booking or its cleaning gap block.'
+          : 'The selected dates conflict with an existing booking.'
       });
     }
 
@@ -122,11 +182,11 @@ export const createBooking = async (req, res) => {
 
     const result = await query(`
       INSERT INTO bookings (
-        id, venue_id, user_email, start_date, end_date, guests, total_price, status, payment_status, check_in_instructions, renter_name, renter_phone, renter_email
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        id, venue_id, user_email, start_date, end_date, guests, total_price, status, payment_status, check_in_instructions, renter_name, renter_phone, renter_email, booking_type
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `, [
-      bookingId, venueId, user_email, startDate, endDate, guests, totalPrice, 'upcoming', 'paid', checkInInstructions, renterName, renterPhone, renterEmail
+      bookingId, venueId, user_email, startDate, endDate, guests, totalPrice, 'upcoming', 'paid', checkInInstructions, renterName, renterPhone, renterEmail, venue.booking_type || 'days'
     ]);
 
     res.status(201).json({
@@ -213,6 +273,56 @@ export const lockVenue = async (req, res) => {
       return res.status(400).json({ message: 'Unlock date cannot precede lock start date.' });
     }
 
+    // Operating hours check for hours-based booking
+    if (venue.booking_type === 'hours') {
+      const getMinutesOfDay = (d) => d.getHours() * 60 + d.getMinutes();
+      const parseTimeStr = (tStr) => {
+        if (!tStr) return 0;
+        const [h, m] = tStr.split(':').map(Number);
+        return h * 60 + m;
+      };
+
+      const startMinutes = getMinutesOfDay(start);
+      const endMinutes = getMinutesOfDay(end);
+      const openMinutes = parseTimeStr(venue.opening_time || '08:00');
+      const closeMinutes = parseTimeStr(venue.closing_time || '22:00');
+
+      if (startMinutes < openMinutes || endMinutes > closeMinutes) {
+        return res.status(400).json({
+          message: `Booking must be within operating hours: ${venue.opening_time || '08:00'} - ${venue.closing_time || '22:00'}.`
+        });
+      }
+    }
+
+    // Schedule overlap conflict validation
+    const existingBookings = await query(`
+      SELECT start_date, end_date, booking_type FROM bookings 
+      WHERE venue_id = $1 AND status != 'cancelled'
+    `, [venueId]);
+
+    const hasOverlap = existingBookings.rows.some(b => {
+      const bStart = new Date(b.start_date);
+      const bEnd = new Date(b.end_date);
+      
+      if (venue.booking_type === 'hours') {
+        const gapHours = Number(venue.cleaning_gap || 0);
+        const limitNewEnd = new Date(end.getTime() + gapHours * 60 * 60 * 1000);
+        const limitExistingEnd = new Date(bEnd.getTime() + gapHours * 60 * 60 * 1000);
+        
+        return start < limitExistingEnd && bStart < limitNewEnd;
+      } else {
+        return start < bEnd && bStart < end;
+      }
+    });
+
+    if (hasOverlap) {
+      return res.status(400).json({ 
+        message: venue.booking_type === 'hours'
+          ? 'The selected time range conflicts with an existing booking or its cleaning gap block.'
+          : 'The selected dates conflict with an existing booking.'
+      });
+    }
+
     // Generate OFF-XXXX ID
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     const bookingId = `OFF-${randomNum}`;
@@ -221,11 +331,11 @@ export const lockVenue = async (req, res) => {
 
     const result = await query(`
       INSERT INTO bookings (
-        id, venue_id, user_email, start_date, end_date, guests, total_price, status, payment_status, check_in_instructions, renter_name, renter_phone, renter_email
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        id, venue_id, user_email, start_date, end_date, guests, total_price, status, payment_status, check_in_instructions, renter_name, renter_phone, renter_email, booking_type
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `, [
-      bookingId, venueId, null, startDate, endDate, guests || 0, totalPrice || 0, 'offline', 'offline', checkInInstructions, renterName, renterPhone, renterEmail
+      bookingId, venueId, null, startDate, endDate, guests || 0, totalPrice || 0, 'offline', 'offline', checkInInstructions, renterName, renterPhone, renterEmail, venue.booking_type || 'days'
     ]);
 
     res.status(201).json({
@@ -235,5 +345,27 @@ export const lockVenue = async (req, res) => {
   } catch (error) {
     console.error('Error locking venue:', error);
     res.status(500).json({ message: 'Error locking venue' });
+  }
+};
+
+// Get bookings of a specific venue by ID
+export const getVenueBookings = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await query(`
+      SELECT 
+        b.id,
+        b.start_date AS "startDate",
+        b.end_date AS "endDate",
+        b.status,
+        b.booking_type AS "bookingType"
+      FROM bookings b
+      WHERE b.venue_id = $1 AND b.status != 'cancelled'
+      ORDER BY b.start_date ASC
+    `, [id]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching venue bookings:', error);
+    res.status(500).json({ message: 'Error fetching venue bookings' });
   }
 };

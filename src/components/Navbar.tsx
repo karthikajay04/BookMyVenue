@@ -46,6 +46,10 @@ export default function Navbar() {
         { href: "/venues", label: "Venues" },
         { href: "/contact", label: "Contact" },
       ]
+    : user.role === "admin"
+    ? [
+        { href: "/admin", label: "Admin Panel" },
+      ]
     : user.role === "venue_owner"
     ? [
         { href: "/", label: "Home" },
@@ -90,10 +94,10 @@ export default function Navbar() {
             );
           })}
           <Link
-            to={user?.role === "venue_owner" ? "/dashboard" : "/venues"}
+            to={user?.role === "admin" ? "/admin" : user?.role === "venue_owner" ? "/dashboard" : "/venues"}
             className="ml-2 bg-[#c5a059] hover:bg-[#ab8237] text-white text-sm font-medium px-5 py-2.5 rounded-full transition-colors"
           >
-            {user?.role === "venue_owner" ? "Dashboard" : "Book Your Venue"}
+            {user?.role === "admin" ? "Admin Panel" : user?.role === "venue_owner" ? "Dashboard" : "Book Your Venue"}
           </Link>
         </div>
 
@@ -242,11 +246,11 @@ export default function Navbar() {
               </>
             )}
             <Link
-              to={user?.role === "venue_owner" ? "/dashboard" : "/venues"}
+              to={user?.role === "admin" ? "/admin" : user?.role === "venue_owner" ? "/dashboard" : "/venues"}
               onClick={() => setMenuOpen(false)}
               className="mt-2 text-center bg-[#c5a059] hover:bg-[#ab8237] text-white text-sm font-semibold px-5 py-3 rounded-full transition-colors"
             >
-              {user?.role === "venue_owner" ? "Dashboard" : "Book Your Venue"}
+              {user?.role === "admin" ? "Admin Panel" : user?.role === "venue_owner" ? "Dashboard" : "Book Your Venue"}
             </Link>
           </div>
         </div>

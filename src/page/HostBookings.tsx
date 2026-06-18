@@ -20,7 +20,7 @@ interface HostBooking {
   endDate: string;
   guests: number;
   totalPrice: number;
-  status: 'upcoming' | 'completed' | 'cancelled';
+  status: 'upcoming' | 'completed' | 'cancelled' | 'offline';
   bookingDate: string;
   paymentStatus: string;
   renterName: string;
@@ -28,6 +28,7 @@ interface HostBooking {
   hostName: string;
   hostMail: string;
   checkInInstructions: string;
+  bookingType?: string;
 }
 
 // Mock Fallback Host Bookings for offline simulation
@@ -114,7 +115,7 @@ export default function HostBookings(): React.JSX.Element {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<HostBooking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<'upcoming' | 'completed'>('upcoming');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'upcoming' | 'completed' | 'offline' | 'cancelled'>('all');
 
   // Interactive detail overlay
   const [selectedBooking, setSelectedBooking] = useState<HostBooking | null>(null);
@@ -199,6 +200,7 @@ export default function HostBookings(): React.JSX.Element {
 
   // Filter bookings based on selected status tab
   const filteredBookings = bookings.filter((b) => {
+    if (activeFilter === 'all') return true;
     return b.status === activeFilter;
   });
 
@@ -215,12 +217,49 @@ export default function HostBookings(): React.JSX.Element {
     });
   };
 
-  const getDurationInNights = (start: string, end: string) => {
+  const formatBookingRange = (start: string, end: string, bookingType?: string): string => {
+    if (bookingType === 'hours') {
+      const startDateObj = new Date(start);
+      const endDateObj = new Date(end);
+      
+      const datePart = startDateObj.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+      
+      const startHourStr = startDateObj.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      
+      const endHourStr = endDateObj.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      
+      return `${datePart}, ${startHourStr} - ${endHourStr}`;
+    }
+    
+    const s = new Date(start);
+    const e = new Date(end);
+    return `${formatDate(start)} to ${formatDate(end)}`;
+  };
+
+  const getDurationText = (start: string, end: string, bookingType?: string) => {
     const s = new Date(start);
     const e = new Date(end);
     const diffTime = Math.abs(e.getTime() - s.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays || 1;
+    if (bookingType === 'hours') {
+      const diffHours = Math.round(diffTime / (1000 * 60 * 60));
+      return `${diffHours} ${diffHours === 1 ? 'Hour' : 'Hours'}`;
+    } else {
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const nights = diffDays || 1;
+      return `${nights} ${nights === 1 ? 'Night' : 'Nights'}`;
+    }
   };
 
   return (
@@ -270,7 +309,7 @@ export default function HostBookings(): React.JSX.Element {
         {/* Filters and Tab Navigation */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-4 mb-8">
           <div className="flex gap-1 bg-white/5 border border-white/10 p-1 rounded-full">
-            {(['upcoming', 'completed'] as const).map((tab) => (
+            {(['all', 'upcoming', 'completed', 'offline', 'cancelled'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveFilter(tab)}
@@ -281,7 +320,7 @@ export default function HostBookings(): React.JSX.Element {
                     : "text-white/60 hover:text-white"
                 )}
               >
-                {tab}
+                {tab === 'all' ? 'All Bookings' : tab}
               </button>
             ))}
           </div>
@@ -307,7 +346,7 @@ export default function HostBookings(): React.JSX.Element {
               const isUpcoming = booking.status === 'upcoming';
               const isCompleted = booking.status === 'completed';
               const isCancelled = booking.status === 'cancelled';
-              const nights = getDurationInNights(booking.startDate, booking.endDate);
+              const durationText = getDurationText(booking.startDate, booking.endDate, booking.bookingType);
 
               return (
                 <div
@@ -341,6 +380,11 @@ export default function HostBookings(): React.JSX.Element {
                             Cancelled
                           </Badge>
                         )}
+                        {booking.status === 'offline' && (
+                          <Badge className="bg-amber-500 text-black border-none text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full">
+                            Offline Lock
+                          </Badge>
+                        )}
                       </div>
                     </div>
 
@@ -352,26 +396,32 @@ export default function HostBookings(): React.JSX.Element {
                       </div>
 
                       <h3 className="text-xl font-bold text-white truncate">
-                        {formatDate(booking.startDate)} <span className="text-xs text-white/40 font-light font-sans mx-1">to</span> {formatDate(booking.endDate)}
+                        {booking.bookingType === 'hours' ? (
+                          formatBookingRange(booking.startDate, booking.endDate, booking.bookingType)
+                        ) : (
+                          <>
+                            {formatDate(booking.startDate)} <span className="text-xs text-white/40 font-light font-sans mx-1">to</span> {formatDate(booking.endDate)}
+                          </>
+                        )}
                       </h3>
 
                       <p className="text-[11px] text-white/50 font-light">
-                        Duration: <span className="text-white font-semibold">{nights} {nights === 1 ? 'Night' : 'Nights'}</span>
+                        Duration: <span className="text-white font-semibold">{durationText}</span>
                       </p>
 
                       {/* Renter Contact details */}
                       <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 pt-1.5 border-t border-white/5 mt-2">
                         <div className="flex items-center gap-1.5 text-xs text-white/70">
                           <User className="w-3.5 h-3.5 text-[#c5a059]" />
-                          <span className="font-medium">{booking.renterName}</span>
+                          <span className="font-medium">{booking.renterName || 'Offline Date Block'}</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-white/50">
                           <Mail className="w-3.5 h-3.5 text-white/40" />
-                          <span className="truncate max-w-[200px]">{booking.renterEmail}</span>
+                          <span className="truncate max-w-[200px]">{booking.renterEmail || 'N/A (Offline)'}</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-white/50">
                           <Users className="w-3.5 h-3.5 text-white/40" />
-                          <span>{booking.guests} Guests</span>
+                          <span>{booking.guests || 0} Guests</span>
                         </div>
                       </div>
                     </div>
@@ -397,11 +447,11 @@ export default function HostBookings(): React.JSX.Element {
                         <ChevronRight className="w-3 h-3 text-white/60" />
                       </Button>
 
-                      {isUpcoming && (
+                      {(isUpcoming || booking.status === 'offline') && (
                         <Button
                           onClick={() => setCancelBookingTarget(booking)}
                           className="bg-white/5 hover:bg-red-950/25 text-red-400 hover:text-red-300 rounded-full w-9 h-9 p-0 border border-white/10 hover:border-red-500/20 transition-colors flex items-center justify-center"
-                          title="Cancel Stay"
+                          title={booking.status === 'offline' ? "Unlock Dates" : "Cancel Stay"}
                         >
                           <XCircle className="w-4 h-4" />
                         </Button>
@@ -470,11 +520,19 @@ export default function HostBookings(): React.JSX.Element {
                   </div>
                   <div className="flex justify-between py-1 border-b border-white/5">
                     <span className="text-white/40">Check-In</span>
-                    <span className="text-white font-medium">{formatDate(selectedBooking.startDate)}</span>
+                    <span className="text-white font-medium">
+                      {selectedBooking.bookingType === 'hours'
+                        ? new Date(selectedBooking.startDate).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
+                        : formatDate(selectedBooking.startDate)}
+                    </span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-white/5">
                     <span className="text-white/40">Check-Out</span>
-                    <span className="text-white font-medium">{formatDate(selectedBooking.endDate)}</span>
+                    <span className="text-white font-medium">
+                      {selectedBooking.bookingType === 'hours'
+                        ? new Date(selectedBooking.endDate).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
+                        : formatDate(selectedBooking.endDate)}
+                    </span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-white/5">
                     <span className="text-white/40">Guests Count</span>
@@ -499,11 +557,15 @@ export default function HostBookings(): React.JSX.Element {
                   <p className="text-[10px] text-[#c5a059] uppercase tracking-widest font-bold">Renter Contact Details</p>
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-[#c5a059] flex items-center justify-center text-black font-bold text-xs uppercase">
-                      {selectedBooking.renterName.charAt(0)}
+                      {(selectedBooking.renterName || 'O').charAt(0)}
                     </div>
                     <div>
-                      <h6 className="font-semibold text-white text-xs">{selectedBooking.renterName}</h6>
-                      <a href={`mailto:${selectedBooking.renterEmail}`} className="text-[11px] text-white/50 hover:underline">{selectedBooking.renterEmail}</a>
+                      <h6 className="font-semibold text-white text-xs">{selectedBooking.renterName || 'Offline Date Block'}</h6>
+                      {selectedBooking.renterEmail ? (
+                        <a href={`mailto:${selectedBooking.renterEmail}`} className="text-[11px] text-white/50 hover:underline">{selectedBooking.renterEmail}</a>
+                      ) : (
+                        <span className="text-[11px] text-white/30">N/A (Offline Block)</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -561,12 +623,22 @@ export default function HostBookings(): React.JSX.Element {
                 <AlertCircle className="w-6 h-6" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-lg font-bold text-white">Cancel Guest Reservation?</h3>
+                <h3 className="text-lg font-bold text-white">
+                  {cancelBookingTarget.status === 'offline' ? 'Unlock Venue Dates?' : 'Cancel Guest Reservation?'}
+                </h3>
                 <p className="text-xs text-white/50 leading-relaxed font-light">
-                  Are you sure you want to cancel the reservation for <strong className="text-white">{cancelBookingTarget.renterName}</strong> at {cancelBookingTarget.venueTitle}?
+                  {cancelBookingTarget.status === 'offline' ? (
+                    <>Are you sure you want to unlock the offline date block at <strong className="text-white">{cancelBookingTarget.venueTitle}</strong>?</>
+                  ) : (
+                    <>Are you sure you want to cancel the reservation for <strong className="text-white">{cancelBookingTarget.renterName}</strong> at {cancelBookingTarget.venueTitle}?</>
+                  )}
                 </p>
                 <p className="text-[10px] text-red-400/80 bg-red-950/10 border border-red-500/10 p-2.5 rounded-lg font-light leading-normal">
-                  The deposit amount of <strong>${cancelBookingTarget.totalPrice.toLocaleString()}</strong> will be refunded to the client. This action is permanent and frees up calendar dates.
+                  {cancelBookingTarget.status === 'offline' ? (
+                    <>This action is permanent and will unlock the dates on your calendar, allowing new online rentals.</>
+                  ) : (
+                    <>The deposit amount of <strong>${cancelBookingTarget.totalPrice.toLocaleString()}</strong> will be refunded to the client. This action is permanent and frees up calendar dates.</>
+                  )}
                 </p>
               </div>
               <div className="flex gap-3 pt-2">
@@ -574,13 +646,13 @@ export default function HostBookings(): React.JSX.Element {
                   onClick={() => setCancelBookingTarget(null)}
                   className="flex-1 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-full h-11 text-xs"
                 >
-                  Keep Booking
+                  {cancelBookingTarget.status === 'offline' ? 'Keep Blocked' : 'Keep Booking'}
                 </Button>
                 <Button
                   onClick={handleConfirmCancel}
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-full h-11 text-xs"
                 >
-                  Cancel Booking
+                  {cancelBookingTarget.status === 'offline' ? 'Unlock Dates' : 'Cancel Booking'}
                 </Button>
               </div>
             </motion.div>

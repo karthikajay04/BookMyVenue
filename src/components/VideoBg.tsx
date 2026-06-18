@@ -5,7 +5,7 @@ type Props = {
   className?: string;
 };
 
-export default function VideoBg({ src, className }: Props) {
+export default function VideoBg({ src }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -16,7 +16,7 @@ export default function VideoBg({ src, className }: Props) {
   }, [src]);
 
   return (
-    <div className={className || 'absolute inset-0 w-full h-full'}>
+    <div className='absolute inset-0 w-full h-full'>
       <video
         ref={videoRef}
         src={src}

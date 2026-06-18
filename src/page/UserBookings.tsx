@@ -40,6 +40,7 @@ export interface Booking {
   hostPhone: string;
   hostMail: string;
   checkInInstructions: string;
+  bookingType?: string;
 }
 
 export interface PlaceCardProps {
@@ -404,6 +405,24 @@ export default function Bookings(): React.JSX.Element {
     });
   };
 
+  const formatBookingRange = (start: string, end: string, bookingType?: string): string => {
+    const s = new Date(start);
+    const e = new Date(end);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) return `${start} to ${end}`;
+    
+    const dateOpt: Intl.DateTimeFormatOptions = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+    
+    if (bookingType === 'hours') {
+      const timeOpt: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+      const dateStr = s.toLocaleDateString('en-US', dateOpt);
+      const startStr = s.toLocaleTimeString('en-US', timeOpt);
+      const endStr = e.toLocaleTimeString('en-US', timeOpt);
+      return `${dateStr}, ${startStr} - ${endStr}`;
+    } else {
+      return `${s.toLocaleDateString('en-US', dateOpt)} to ${e.toLocaleDateString('en-US', dateOpt)}`;
+    }
+  };
+
   const getDueDateString = (dateStr: string): string => {
     // Calculates exactly 1 day before check-in arrival
     const d = new Date(dateStr);
@@ -516,7 +535,7 @@ export default function Bookings(): React.JSX.Element {
                     ]}
                     rating={4.9}
                     title={booking.venueTitle}
-                    dateRange={`${formatDateString(booking.startDate)} to ${formatDateString(booking.endDate)}`}
+                    dateRange={formatBookingRange(booking.startDate, booking.endDate, booking.bookingType)}
                     hostType="Verified Elite Host"
                     isTopRated={isUpcoming}
                     description={booking.checkInInstructions}
@@ -657,12 +676,14 @@ export default function Bookings(): React.JSX.Element {
                   <span className="text-white font-medium">{ticketModalBooking.venueLocation}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-white/5">
-                  <span className="text-white/50">Scheduled Arrival</span>
-                  <span className="text-white font-medium">{formatDateString(ticketModalBooking.startDate)}</span>
+                  <span className="text-white/50">Booking Type</span>
+                  <span className="text-white font-medium capitalize">{ticketModalBooking.bookingType || 'days'}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-white/5">
-                  <span className="text-white/50">Scheduled Departure</span>
-                  <span className="text-white font-medium">{formatDateString(ticketModalBooking.endDate)}</span>
+                  <span className="text-white/50">Schedule</span>
+                  <span className="text-white font-medium text-right">
+                    {formatBookingRange(ticketModalBooking.startDate, ticketModalBooking.endDate, ticketModalBooking.bookingType)}
+                  </span>
                 </div>
               </div>
 

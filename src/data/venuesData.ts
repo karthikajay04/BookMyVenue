@@ -18,6 +18,10 @@ export interface Venue {
   catering: string;
   rules: string[];
   eventTypes: string[];
+  bookingType?: 'days' | 'hours';
+  cleaningGap?: number;
+  openingTime?: string;
+  closingTime?: string;
 }
 
 export const sampleVenues: Venue[] = [

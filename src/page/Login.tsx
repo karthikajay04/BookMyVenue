@@ -38,7 +38,7 @@ export default function Login() {
       setSuccess(true);
 
       const params = new URLSearchParams(window.location.search);
-      const redirect = params.get('redirect') || '/venues';
+      const redirect = params.get('redirect') || (data.user.role === 'admin' ? '/admin' : '/venues');
 
       setTimeout(() => {
         navigate(redirect);

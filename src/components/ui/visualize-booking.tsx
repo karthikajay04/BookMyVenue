@@ -26,6 +26,7 @@ export interface CalendarBooking {
   status: string;
   renterName: string | null;
   renterEmail: string | null;
+  bookingType?: string;
 }
 
 interface DayProps {
@@ -226,16 +227,46 @@ const InteractiveCalendar = React.forwardRef<
         return dateStr >= bStart && dateStr <= bEnd;
       });
       
+      const formatTime = (dateStr: string) => {
+        return new Date(dateStr).toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+      };
+
       const meetingInfo = activeBookings.length > 0
-        ? activeBookings.map(b => ({
-            date: `${new Date(b.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${new Date(b.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
-            time: b.status === 'offline' ? 'Offline Lock' : `Guests: ${b.guests}`,
-            title: b.venueTitle,
-            participants: b.status === 'offline'
-              ? ['Offline Block']
-              : [b.renterName || 'Registered User', b.renterEmail || ''].filter(Boolean),
-            location: b.venueLocation,
-          }))
+        ? activeBookings.map(b => {
+            const isHourly = b.bookingType === 'hours';
+            const dateText = isHourly 
+              ? new Date(b.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+              : `${new Date(b.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${new Date(b.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+            
+            let timeText = b.status === 'offline' ? 'Offline Lock' : `Guests: ${b.guests}`;
+            if (isHourly) {
+              const startT = formatTime(b.startDate);
+              const endT = formatTime(b.endDate);
+              timeText = `${startT} - ${endT}`;
+            }
+
+            const participantsList = b.status === 'offline'
+              ? ['Offline Block', b.renterName].filter(Boolean)
+              : [b.renterName || 'Registered User', b.renterEmail || ''].filter(Boolean);
+            
+            if (isHourly && b.status !== 'offline') {
+              participantsList.push(`${b.guests} Guests`);
+            } else if (isHourly && b.status === 'offline') {
+              participantsList.push('Offline Lock');
+            }
+
+            return {
+              date: dateText,
+              time: timeText,
+              title: b.venueTitle,
+              participants: participantsList,
+              location: b.venueLocation,
+            };
+          })
         : undefined;
       
       days.push({

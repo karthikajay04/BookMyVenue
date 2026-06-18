@@ -12,7 +12,6 @@ function Home() {
     <section className="relative w-full min-h-screen sm:h-screen overflow-hidden bg-[#0a0a0c]">
       <VideoBg
         src={BG_VIDEO}
-        className="absolute inset-0 w-full h-full"
       />
 
       {/* Navigation */}

@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './page/Home';
 import Venues from './page/Venues';
 import Contact from './page/Contact';
@@ -8,24 +8,55 @@ import VenueDetail from './page/VenueDetail';
 import AddVenue from './page/AddVenue';
 import Bookings from './page/UserBookings';
 import MyVenues from './page/MyVenues';
+import HostVenueDetail from './page/HostVenueDetail';
 import HostBookings from './page/HostBookings';
 import HostDashboard from './page/HostDashboard';
+import AdminDashboard from './page/AdminDashboard';
+
+// Route wrapper to require Admin role
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const userStr = localStorage.getItem('user');
+  if (!userStr) return <Navigate to="/login" replace />;
+  try {
+    const user = JSON.parse(userStr);
+    if (user.role !== 'admin') return <Navigate to="/" replace />;
+  } catch {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+}
+
+// Route wrapper to prevent Admin from accessing normal pages
+function NonAdminRoute({ children }: { children: React.ReactNode }) {
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      if (user.role === 'admin') return <Navigate to="/admin" replace />;
+    } catch {}
+  }
+  return <>{children}</>;
+}
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/venues" element={<Venues />} />
-        <Route path="/venue/:id" element={<VenueDetail />} />
-        <Route path="/addvenues" element={<AddVenue />} />
-        <Route path="/my-venues" element={<MyVenues />} />
-        <Route path="/bookings" element={<HostBookings />} />
-        <Route path="/dashboard" element={<HostDashboard />} />
-        <Route path="/contact" element={<Contact />} />
+        <Route path="/" element={<NonAdminRoute><Home /></NonAdminRoute>} />
+        <Route path="/venues" element={<NonAdminRoute><Venues /></NonAdminRoute>} />
+        <Route path="/venue/:id" element={<NonAdminRoute><VenueDetail /></NonAdminRoute>} />
+        <Route path="/addvenues" element={<NonAdminRoute><AddVenue /></NonAdminRoute>} />
+        <Route path="/my-venues" element={<NonAdminRoute><MyVenues /></NonAdminRoute>} />
+        <Route path="/my-venues/:id" element={<NonAdminRoute><HostVenueDetail /></NonAdminRoute>} />
+        <Route path="/bookings" element={<NonAdminRoute><HostBookings /></NonAdminRoute>} />
+        <Route path="/dashboard" element={<NonAdminRoute><HostDashboard /></NonAdminRoute>} />
+        <Route path="/contact" element={<NonAdminRoute><Contact /></NonAdminRoute>} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/mybooking" element={<Bookings />} />
+        <Route path="/mybooking" element={<NonAdminRoute><Bookings /></NonAdminRoute>} />
+        
+        {/* Admin route */}
+        <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
       </Routes>
     </Router>
   );

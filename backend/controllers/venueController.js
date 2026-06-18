@@ -23,6 +23,11 @@ const mapVenueRow = (row) => {
     amenities: row.amenities,
     rules: row.rules,
     eventTypes: row.event_types,
+    status: row.status || 'pending',
+    bookingType: row.booking_type || 'days',
+    cleaningGap: Number(row.cleaning_gap || 0),
+    openingTime: row.opening_time || '08:00',
+    closingTime: row.closing_time || '22:00',
     tags: [
       row.location,
       `${row.capacity} Guests`,
@@ -38,7 +43,7 @@ export const getVenues = async (req, res) => {
     let queryText = 'SELECT * FROM venues';
     const params = [];
 
-    const conditions = [];
+    const conditions = ["status = 'approved'"];
     if (location && location !== 'All') {
       params.push(location);
       conditions.push(`location = $${params.length}`);
@@ -92,7 +97,7 @@ export const createVenue = async (req, res) => {
   const {
     title, description, location, full_address, capacity, square_feet, price_per_night,
     host_type, rating, is_top_rated, date_range, parking, catering,
-    images, amenities, rules, event_types
+    images, amenities, rules, event_types, booking_type, cleaning_gap, opening_time, closing_time
   } = req.body;
 
   const host_email = req.user.email; // From authentication middleware
@@ -106,13 +111,14 @@ export const createVenue = async (req, res) => {
       INSERT INTO venues (
         title, description, location, full_address, capacity, square_feet, price_per_night,
         host_email, host_type, rating, is_top_rated, date_range, parking, catering,
-        images, amenities, rules, event_types
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+        images, amenities, rules, event_types, status, booking_type, cleaning_gap, opening_time, closing_time
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
       RETURNING *
     `, [
       title, description, location, full_address, capacity, square_feet, price_per_night,
       host_email, host_type || 'Superhost', rating || 5.0, is_top_rated || false, date_range || 'Available', parking || '', catering || '',
-      images || [], amenities || [], rules || [], event_types || []
+      images || [], amenities || [], rules || [], event_types || [], 'pending',
+      booking_type || 'days', Number(cleaning_gap || 0), opening_time || '08:00', closing_time || '22:00'
     ]);
 
     res.status(201).json({
@@ -158,6 +164,10 @@ export const updateVenue = async (req, res) => {
   const amenities = req.body.amenities;
   const rules = req.body.rules;
   const event_types = req.body.eventTypes || req.body.event_types;
+  const booking_type = req.body.bookingType || req.body.booking_type;
+  const cleaning_gap = req.body.cleaningGap !== undefined ? req.body.cleaningGap : req.body.cleaning_gap;
+  const opening_time = req.body.openingTime || req.body.opening_time;
+  const closing_time = req.body.closingTime || req.body.closing_time;
 
   try {
     // Check ownership
@@ -190,13 +200,19 @@ export const updateVenue = async (req, res) => {
         images = $13,
         amenities = $14,
         rules = $15,
-        event_types = $16
-      WHERE id = $17 AND host_email = $18
+        event_types = $16,
+        status = 'pending',
+        booking_type = $17,
+        cleaning_gap = $18,
+        opening_time = $19,
+        closing_time = $20
+      WHERE id = $21 AND host_email = $22
       RETURNING *
     `, [
       title, description, location, full_address, Number(capacity), Number(square_feet), Number(price_per_night),
       host_type || 'Superhost', is_top_rated || false, date_range || 'Available', parking || '', catering || '',
       images || [], amenities || [], rules || [], event_types || [],
+      booking_type || 'days', Number(cleaning_gap || 0), opening_time || '08:00', closing_time || '22:00',
       id, host_email
     ]);
 

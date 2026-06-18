@@ -31,6 +31,7 @@ interface HostBooking {
   hostName: string;
   hostMail: string;
   checkInInstructions: string;
+  bookingType?: string;
 }
 
 interface Venue {
@@ -39,6 +40,10 @@ interface Venue {
   location: string;
   pricePerNight: number;
   images: string[];
+  bookingType?: 'days' | 'hours';
+  openingTime?: string;
+  closingTime?: string;
+  cleaningGap?: number;
 }
 
 export default function HostDashboard(): React.JSX.Element {
@@ -57,6 +62,9 @@ export default function HostDashboard(): React.JSX.Element {
   const [selectedVenueId, setSelectedVenueId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [lockDate, setLockDate] = useState('');
+  const [lockStartHour, setLockStartHour] = useState('09:00');
+  const [lockEndHour, setLockEndHour] = useState('22:00');
   const [lockNotes, setLockNotes] = useState('');
   const [lockRevenue, setLockRevenue] = useState<number>(0);
   const [lockGuests, setLockGuests] = useState<number>(0);
@@ -64,6 +72,16 @@ export default function HostDashboard(): React.JSX.Element {
   const [lockRenterPhone, setLockRenterPhone] = useState('');
   const [lockRenterEmail, setLockRenterEmail] = useState('');
   const [isLocking, setIsLocking] = useState(false);
+
+  const selectedVenue = venues.find(v => String(v.id) === String(selectedVenueId));
+  const isHours = selectedVenue?.bookingType === 'hours';
+
+  useEffect(() => {
+    if (selectedVenue && selectedVenue.bookingType === 'hours') {
+      setLockStartHour(selectedVenue.openingTime || '08:00');
+      setLockEndHour(selectedVenue.closingTime || '22:00');
+    }
+  }, [selectedVenueId, venues]);
 
   // Modal Details
   const [selectedBooking, setSelectedBooking] = useState<HostBooking | null>(null);
@@ -143,25 +161,53 @@ export default function HostDashboard(): React.JSX.Element {
   // Handle Venue Locking Submit
   const handleLockSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedVenueId || !startDate || !endDate || !lockRenterName || !lockRenterPhone || !lockRenterEmail) {
+    const reqStart = isHours ? lockDate : startDate;
+    const reqEnd = isHours ? lockDate : endDate;
+
+    if (!selectedVenueId || !reqStart || !reqEnd || !lockRenterName || !lockRenterPhone || !lockRenterEmail || (isHours && (!lockStartHour || !lockEndHour))) {
       triggerToast('Please fill out all required locking fields (including customer name, phone, and email).', 'error');
       return;
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const finalStart = isHours ? `${lockDate}T${lockStartHour}:00` : startDate;
+    const finalEnd = isHours ? `${lockDate}T${lockEndHour}:00` : endDate;
+
+    const start = new Date(finalStart);
+    const end = new Date(finalEnd);
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    start.setHours(0, 0, 0, 0);
 
-    if (start < today) {
-      triggerToast('Lock start date cannot be in the past.', 'error');
-      return;
-    }
-
-    if (end < start) {
-      triggerToast('Unlock date cannot precede lock date.', 'error');
-      return;
+    if (isHours) {
+      if (start < today) {
+        triggerToast('Lock start time cannot be in the past.', 'error');
+        return;
+      }
+      if (end <= start) {
+        triggerToast('Unlock time must be after lock start time.', 'error');
+        return;
+      }
+      const getMinutes = (timeStr: string) => {
+        const [h, m] = timeStr.split(':').map(Number);
+        return h * 60 + m;
+      };
+      const openMin = getMinutes(selectedVenue?.openingTime || '08:00');
+      const closeMin = getMinutes(selectedVenue?.closingTime || '22:00');
+      const startMin = getMinutes(lockStartHour);
+      const endMin = getMinutes(lockEndHour);
+      if (startMin < openMin || endMin > closeMin) {
+        triggerToast(`Lock time must be within operating hours: ${selectedVenue?.openingTime || '08:00'} - ${selectedVenue?.closingTime || '22:00'}.`, 'error');
+        return;
+      }
+    } else {
+      today.setHours(0, 0, 0, 0);
+      start.setHours(0, 0, 0, 0);
+      if (start < today) {
+        triggerToast('Lock start date cannot be in the past.', 'error');
+        return;
+      }
+      if (end < start) {
+        triggerToast('Unlock date cannot precede lock date.', 'error');
+        return;
+      }
     }
 
     setIsLocking(true);
@@ -176,8 +222,8 @@ export default function HostDashboard(): React.JSX.Element {
         },
         body: JSON.stringify({
           venueId: Number(selectedVenueId),
-          startDate,
-          endDate,
+          startDate: finalStart,
+          endDate: finalEnd,
           notes: lockNotes,
           totalPrice: lockRevenue || 0,
           guests: lockGuests || 0,
@@ -194,6 +240,7 @@ export default function HostDashboard(): React.JSX.Element {
         // Reset locking inputs
         setStartDate('');
         setEndDate('');
+        setLockDate('');
         setLockNotes('');
         setLockRevenue(0);
         setLockGuests(0);
@@ -450,28 +497,61 @@ export default function HostDashboard(): React.JSX.Element {
                   </div>
 
                   {/* Date Selectors */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Lock Start Date *</label>
-                      <input
-                        type="date"
-                        value={startDate}
-                        min={todayStr}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
-                      />
+                  {isHours ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Lock Date *</label>
+                        <input
+                          type="date"
+                          value={lockDate}
+                          min={todayStr}
+                          onChange={(e) => setLockDate(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Start Hour *</label>
+                        <input
+                          type="time"
+                          value={lockStartHour}
+                          onChange={(e) => setLockStartHour(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">End Hour *</label>
+                        <input
+                          type="time"
+                          value={lockEndHour}
+                          onChange={(e) => setLockEndHour(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Unlock Date *</label>
-                      <input
-                        type="date"
-                        value={endDate}
-                        min={startDate || todayStr}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
-                      />
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Lock Start Date *</label>
+                        <input
+                          type="date"
+                          value={startDate}
+                          min={todayStr}
+                          onChange={(e) => setStartDate(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Unlock Date *</label>
+                        <input
+                          type="date"
+                          value={endDate}
+                          min={startDate || todayStr}
+                          onChange={(e) => setEndDate(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Reason/Notes */}
                   <div className="space-y-1.5">
@@ -553,7 +633,14 @@ export default function HostDashboard(): React.JSX.Element {
                     </Button>
                     <Button
                       type="submit"
-                      disabled={isLocking || venues.length === 0 || !lockRenterName || !lockRenterPhone || !lockRenterEmail || !startDate || !endDate}
+                      disabled={
+                        isLocking ||
+                        venues.length === 0 ||
+                        !lockRenterName ||
+                        !lockRenterPhone ||
+                        !lockRenterEmail ||
+                        (isHours ? (!lockDate || !lockStartHour || !lockEndHour) : (!startDate || !endDate))
+                      }
                       className="flex-1 bg-[#c5a059] hover:bg-[#b08e4d] disabled:opacity-40 disabled:hover:bg-[#c5a059] text-black font-semibold rounded-xl h-11 shadow-lg shadow-[#c5a059]/10 transition-all flex items-center justify-center gap-2"
                     >
                       {isLocking ? (
@@ -673,12 +760,20 @@ export default function HostDashboard(): React.JSX.Element {
                     <span className="font-mono text-white font-semibold">{selectedBooking.id}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-white/5">
-                    <span className="text-white/40">Locked From</span>
-                    <span className="text-white font-medium">{formatDate(selectedBooking.startDate)}</span>
+                    <span className="text-white/40">{selectedBooking.status === 'offline' ? 'Locked From' : 'Check-In'}</span>
+                    <span className="text-white font-medium">
+                      {selectedBooking.bookingType === 'hours'
+                        ? new Date(selectedBooking.startDate).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
+                        : formatDate(selectedBooking.startDate)}
+                    </span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-white/5">
-                    <span className="text-white/40">Unlocked On</span>
-                    <span className="text-white font-medium">{formatDate(selectedBooking.endDate)}</span>
+                    <span className="text-white/40">{selectedBooking.status === 'offline' ? 'Unlocked On' : 'Check-Out'}</span>
+                    <span className="text-white font-medium">
+                      {selectedBooking.bookingType === 'hours'
+                        ? new Date(selectedBooking.endDate).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
+                        : formatDate(selectedBooking.endDate)}
+                    </span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-white/5">
                     <span className="text-white/40">Offline Guests</span>
@@ -796,11 +891,23 @@ export default function HostDashboard(): React.JSX.Element {
                   {cancelTarget.status === 'offline' ? 'Unlock Venue Dates?' : 'Cancel Reservation?'}
                 </h3>
                 <p className="text-xs text-white/50 leading-relaxed font-light">
-                  Are you sure you want to remove the date lock for <strong className="text-white">{cancelTarget.venueTitle}</strong> from <strong className="text-white">{formatDate(cancelTarget.startDate)}</strong> to <strong className="text-white">{formatDate(cancelTarget.endDate)}</strong>?
+                  Are you sure you want to remove the block/reservation for <strong className="text-white">{cancelTarget.venueTitle}</strong>{' '}
+                  {cancelTarget.bookingType === 'hours' ? (
+                    <>
+                      on <strong className="text-white">{new Date(cancelTarget.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</strong>{' '}
+                      from <strong className="text-white">{new Date(cancelTarget.startDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</strong>{' '}
+                      to <strong className="text-white">{new Date(cancelTarget.endDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</strong>
+                    </>
+                  ) : (
+                    <>
+                      from <strong className="text-white">{formatDate(cancelTarget.startDate)}</strong>{' '}
+                      to <strong className="text-white">{formatDate(cancelTarget.endDate)}</strong>
+                    </>
+                  )}?
                 </p>
                 <p className="text-[10px] text-red-400/80 bg-red-950/10 border border-red-500/10 p-2.5 rounded-lg font-light leading-normal">
                   {cancelTarget.status === 'offline'
-                    ? "This date block will be removed. The dates will become available for public online bookings on our portal immediately."
+                    ? "This block will be removed. The slot will become available for public online bookings on our portal immediately."
                     : `This reservation is for renter ${cancelTarget.renterName}. Cancelling it will trigger a full refund of $${cancelTarget.totalPrice.toLocaleString()}.`}
                 </p>
               </div>

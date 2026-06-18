@@ -9,12 +9,14 @@ import Navbar from '../components/Navbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getVenues } from '../data/venuesData';
+import type { Venue } from '../data/venuesData';
 import { cn } from '@/lib/utils';
 
 export default function VenueDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeImageIdx, setActiveImageIdx] = useState(0);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   
   const [bookingStep, setBookingStep] = useState<'idle' | 'date-selection' | 'payment' | 'success'>('idle');
   const [checkIn, setCheckIn] = useState('');
@@ -28,6 +30,161 @@ export default function VenueDetail() {
   const [renterName, setRenterName] = useState('');
   const [renterPhone, setRenterPhone] = useState('');
   const [renterEmail, setRenterEmail] = useState('');
+
+  // Hours-based states
+  const [bookedSlots, setBookedSlots] = useState<any[]>([]);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startHour, setStartHour] = useState('');
+  const [endHour, setEndHour] = useState('');
+
+  // Fetch booked slots for the venue
+  useEffect(() => {
+    const fetchBookedSlots = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/venues/${id}/bookings`);
+        if (response.ok) {
+          const data = await response.json();
+          setBookedSlots(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch venue bookings:', err);
+      }
+    };
+    if (id) {
+      fetchBookedSlots();
+    }
+  }, [id, bookingStep]);
+
+  const parseTimeStr = (tStr: string) => {
+    if (!tStr) return 0;
+    const [h, m] = tStr.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  const formatTime12h = (timeStr: string) => {
+    if (!timeStr) return '';
+    const [hStr, mStr] = timeStr.split(':');
+    const h = Number(hStr);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const displayH = h % 12 === 0 ? 12 : h % 12;
+    return `${displayH}:${mStr} ${ampm}`;
+  };
+
+  const combineDateAndHour = (dateStr: string, hourStr: string) => {
+    return `${dateStr}T${hourStr}:00`;
+  };
+
+  const generateTimelineHours = () => {
+    if (!venue) return [];
+    const slots = [];
+    const startMin = parseTimeStr(venue.openingTime || '08:00');
+    const endMin = parseTimeStr(venue.closingTime || '22:00');
+    
+    // Generate every hour
+    for (let min = startMin; min + 60 <= endMin; min += 60) {
+      const sh = Math.floor(min / 60);
+      const sm = min % 60;
+      const eh = Math.floor((min + 60) / 60);
+      const em = (min + 60) % 60;
+      
+      const startStr = `${String(sh).padStart(2, '0')}:${String(sm).padStart(2, '0')}`;
+      const endStr = `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`;
+      slots.push({ start: startStr, end: endStr });
+    }
+    return slots;
+  };
+
+  const generateHourOptions = () => {
+    if (!venue) return [];
+    const options = [];
+    const startMin = parseTimeStr(venue.openingTime || '08:00');
+    const endMin = parseTimeStr(venue.closingTime || '22:00');
+    
+    for (let min = startMin; min <= endMin; min += 30) {
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      options.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+    }
+    return options;
+  };
+
+  const isSlotWithinSelectedRange = (slotStartStr: string, slotEndStr: string) => {
+    if (!startHour || !endHour) return false;
+    const sMinutes = parseTimeStr(startHour);
+    const eMinutes = parseTimeStr(endHour);
+    const slotSMin = parseTimeStr(slotStartStr);
+    const slotEMin = parseTimeStr(slotEndStr);
+    
+    return slotSMin >= sMinutes && slotEMin <= eMinutes;
+  };
+
+  const handleSlotClick = (slotStart: string, slotEnd: string) => {
+    if (!startHour || (startHour && endHour)) {
+      setStartHour(slotStart);
+      setEndHour(slotEnd);
+    } else {
+      const startMin = parseTimeStr(startHour);
+      const clickMin = parseTimeStr(slotStart);
+      if (clickMin >= startMin) {
+        setEndHour(slotEnd);
+      } else {
+        setStartHour(slotStart);
+        setEndHour(slotEnd);
+      }
+    }
+  };
+
+  const getSlotStatus = (hStart: string, hEnd: string) => {
+    if (!selectedDate) return 'available';
+    const slotStart = new Date(combineDateAndHour(selectedDate, hStart));
+    const slotEnd = new Date(combineDateAndHour(selectedDate, hEnd));
+    
+    for (const b of bookedSlots) {
+      const bStart = new Date(b.startDate);
+      const bEnd = new Date(b.endDate);
+      const gapHours = Number(venue?.cleaningGap || 0);
+      const bCleaningEnd = new Date(bEnd.getTime() + gapHours * 60 * 60 * 1000);
+      
+      if (slotStart < bEnd && bStart < slotEnd) {
+        return 'booked';
+      }
+      if (slotStart < bCleaningEnd && bEnd <= slotStart) {
+        return 'cleaning';
+      }
+    }
+    return 'available';
+  };
+
+  const getHourBookingError = () => {
+    if (venue?.bookingType !== 'hours') return '';
+    if (!selectedDate || !startHour || !endHour) return '';
+    const start = new Date(combineDateAndHour(selectedDate, startHour));
+    const end = new Date(combineDateAndHour(selectedDate, endHour));
+    
+    if (end <= start) {
+      return 'End time must be after start time.';
+    }
+    
+    // Check overlap
+    const hasOverlap = bookedSlots.some(b => {
+      const bStart = new Date(b.startDate);
+      const bEnd = new Date(b.endDate);
+      
+      const gapHours = Number(venue.cleaningGap || 0);
+      const limitNewEnd = new Date(end.getTime() + gapHours * 60 * 60 * 1000);
+      const limitExistingEnd = new Date(bEnd.getTime() + gapHours * 60 * 60 * 1000);
+      
+      return start < limitExistingEnd && bStart < limitNewEnd;
+    });
+    
+    if (hasOverlap) {
+      return 'The selected time range conflicts with an existing booking or its cleaning gap.';
+    }
+    
+    return '';
+  };
+
+  const hourBookingError = getHourBookingError();
 
   // Date limit helpers for web bookings (only allowed within 30 days)
   const todayStr = new Date().toISOString().split('T')[0];
@@ -69,6 +226,7 @@ export default function VenueDetail() {
     if (userStr) {
       try {
         const userObj = JSON.parse(userStr);
+        setCurrentUser(userObj);
         setRenterName(userObj.name || '');
         setRenterEmail(userObj.email || '');
       } catch (e) {
@@ -76,6 +234,13 @@ export default function VenueDetail() {
       }
     }
   }, []);
+
+  // Redirect venue owners to their dedicated view/manage page
+  useEffect(() => {
+    if (currentUser?.role === 'venue_owner' && id) {
+      navigate(`/my-venues/${id}`);
+    }
+  }, [currentUser, id, navigate]);
 
   // Fetch the requested venue dynamically
   useEffect(() => {
@@ -142,7 +307,27 @@ export default function VenueDetail() {
     );
   }
 
-  const basePrice = venue.pricePerNight;
+  const isHours = venue.bookingType === 'hours';
+  
+  const getDurationInHours = (s: string, e: string) => {
+    if (!s || !e) return 1;
+    const [sh, sm] = s.split(':').map(Number);
+    const [eh, em] = e.split(':').map(Number);
+    const diff = (eh + em/60) - (sh + sm/60);
+    return diff > 0 ? diff : 1;
+  };
+  
+  const getDurationInDays = (s: string, e: string) => {
+    if (!s || !e) return 1;
+    const sDate = new Date(s);
+    const eDate = new Date(e);
+    const diffTime = Math.abs(eDate.getTime() - sDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays || 1;
+  };
+
+  const duration = isHours ? getDurationInHours(startHour, endHour) : getDurationInDays(checkIn, checkOut);
+  const basePrice = venue.pricePerNight * duration;
   const serviceFee = Math.round(basePrice * 0.15);
   const totalPrice = basePrice + serviceFee;
 
@@ -173,6 +358,9 @@ export default function VenueDetail() {
       setIsSubmittingBooking(true);
       setBookingError('');
 
+      const finalStartDate = venue.bookingType === 'hours' ? combineDateAndHour(selectedDate, startHour) : checkIn;
+      const finalEndDate = venue.bookingType === 'hours' ? combineDateAndHour(selectedDate, endHour) : checkOut;
+
       const response = await fetch('http://localhost:5000/api/bookings', {
         method: 'POST',
         headers: {
@@ -181,8 +369,8 @@ export default function VenueDetail() {
         },
         body: JSON.stringify({
           venueId: venue.id,
-          startDate: checkIn,
-          endDate: checkOut,
+          startDate: finalStartDate,
+          endDate: finalEndDate,
           guests: venue.capacity, // default to venue capacity
           totalPrice: totalPrice,
           renterName,
@@ -226,11 +414,17 @@ export default function VenueDetail() {
 
         {/* Back Link */}
         <button
-          onClick={() => navigate('/venues')}
+          onClick={() => {
+            if (currentUser?.role === 'venue_owner') {
+              navigate('/my-venues');
+            } else {
+              navigate('/venues');
+            }
+          }}
           className="group flex items-center gap-2 text-white/50 hover:text-[#c5a059] text-sm font-semibold transition-all mb-8 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full border border-white/5 hover:border-[#c5a059]/20"
         >
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-          Back to Venues
+          {currentUser?.role === 'venue_owner' ? 'Back to My Listings' : 'Back to Venues'}
         </button>
 
         {/* Title Block */}
@@ -409,23 +603,23 @@ export default function VenueDetail() {
                 </div>
               </div>
 
-              {/* Section 5: Availability & Calendar (NEW!) */}
+              {/* Section 5: Availability & Calendar */}
               <div className="space-y-6 pt-4">
                 <h3 className="text-sm font-bold text-[#c5a059] uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-white/5">
                   <Calendar className="w-4 h-4" /> Availability & Booked Dates
                 </h3>
-
+ 
                 <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-6 space-y-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                       <h4 className="text-base font-bold text-white">
-                        {venue.id === '1' ? 'June 2026' : 'July 2026'}
+                        {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
                       </h4>
                       <p className="text-xs text-white/50 mt-1">
                         Official active booking calendar schedules for {venue.title}
                       </p>
                     </div>
-
+ 
                     {/* Calendar Legend */}
                     <div className="flex items-center gap-4 text-xs">
                       <div className="flex items-center gap-2">
@@ -433,56 +627,94 @@ export default function VenueDetail() {
                         <span className="text-white/40">Booked</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#c5a059] shadow-md shadow-[#c5a059]/20 flex-shrink-0" />
-                        <span className="text-white font-semibold">Available</span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex-shrink-0" />
+                        <span className="text-emerald-400 font-semibold">Available</span>
                       </div>
                     </div>
                   </div>
-
+ 
                   {/* Calendar Grid */}
                   <div className="max-w-md mx-auto">
                     {/* Days of Week Header */}
                     <div className="grid grid-cols-7 gap-2 text-center text-xs font-bold text-white/40 mb-3 uppercase tracking-wider">
                       <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
                     </div>
-
+ 
                     {/* Days Grid */}
                     <div className="grid grid-cols-7 gap-2">
                       {/* Empty slots for month start offset */}
-                      {Array.from({ length: venue.id === '1' ? 1 : 3 }).map((_, idx) => (
+                      {Array.from({ length: new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay() }).map((_, idx) => (
                         <div key={`empty-${idx}`} className="aspect-square" />
                       ))}
-
+ 
                       {/* Days list */}
-                      {Array.from({ length: venue.id === '1' ? 30 : 31 }).map((_, idx) => {
+                      {Array.from({ length: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() }).map((_, idx) => {
                         const day = idx + 1;
-                        const isAvailable = venue.id === '1'
-                          ? (day >= 12 && day <= 18)
-                          : (day >= 20 && day <= 25);
-
+                        const calYear = new Date().getFullYear();
+                        const calMonth = new Date().getMonth();
+                        const checkDateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                        const checkDate = new Date(`${checkDateStr}T00:00:00`);
+                        
+                        let status = 'available';
+                        if (venue.bookingType === 'hours') {
+                          const dayBookings = bookedSlots.filter(b => b.startDate.split('T')[0] === checkDateStr);
+                          if (dayBookings.length > 0) {
+                            const slots = generateTimelineHours();
+                            let bookedSlotsCount = 0;
+                            slots.forEach(slot => {
+                              if (getSlotStatus(slot.start, slot.end) !== 'available') {
+                                bookedSlotsCount++;
+                              }
+                            });
+                            if (bookedSlotsCount >= slots.length) {
+                              status = 'booked';
+                            } else {
+                              status = 'partial';
+                            }
+                          }
+                        } else {
+                          const hasBooking = bookedSlots.some(b => {
+                            const bStart = new Date(b.startDate.split('T')[0] + 'T00:00:00');
+                            const bEnd = new Date(b.endDate.split('T')[0] + 'T00:00:00');
+                            return checkDate >= bStart && checkDate < bEnd;
+                          });
+                          status = hasBooking ? 'booked' : 'available';
+                        }
+ 
                         return (
                           <div
                             key={`day-${day}`}
+                            onClick={() => {
+                              if (venue.bookingType === 'hours') {
+                                setSelectedDate(checkDateStr);
+                              }
+                            }}
                             className={cn(
-                              "aspect-square flex flex-col items-center justify-center text-xs rounded-xl transition-all duration-200",
-                              isAvailable
-                                ? "bg-[#c5a059] text-black font-bold shadow-md shadow-[#c5a059]/10 cursor-pointer hover:scale-105 active:scale-95"
-                                : "bg-white/[0.01] border border-white/5 text-white/30"
+                              "aspect-square flex flex-col items-center justify-center text-xs rounded-xl transition-all duration-200 cursor-pointer",
+                              status === 'available'
+                                ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold hover:scale-105"
+                                : status === 'partial'
+                                ? "bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold hover:scale-105"
+                                : "bg-zinc-800 text-white/20 border-white/5 cursor-not-allowed"
                             )}
                           >
                             <span>{day}</span>
-                            {isAvailable && (
-                              <span className="w-1 h-1 rounded-full bg-black mt-0.5" />
+                            {status === 'partial' && (
+                              <span className="w-1 h-1 rounded-full bg-amber-400 mt-0.5" />
                             )}
                           </div>
                         );
                       })}
                     </div>
                   </div>
-
+ 
                   {/* Calendar details footer */}
                   <p className="text-xs text-white/50 text-center font-light leading-relaxed pt-2 border-t border-white/5">
-                    This location has an active booking rate of <span className="text-white font-semibold">${venue.pricePerNight}/day</span> during the available window. Dates highlighted in <span className="text-[#c5a059] font-semibold">gold</span> are open for instant booking inquiries.
+                    This location has an active booking rate of <span className="text-white font-semibold">${venue.pricePerNight}/{venue.bookingType === 'hours' ? 'hour' : 'day'}</span>. 
+                    Dates highlighted in <span className="text-emerald-400 font-semibold">green</span> are open for booking.
+                    {venue.bookingType === 'hours' && (
+                      <span> Click on any day to select it and view available slots on the right widget.</span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -508,7 +740,39 @@ export default function VenueDetail() {
 
           {/* Right Column: Sticky Booking Widget (4-cols) */}
           <div className="lg:col-span-4 lg:sticky lg:top-28">
-            <AnimatePresence mode="wait">
+            {currentUser?.role === 'venue_owner' ? (
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-[#0e0e12]/95 border border-[#c5a059]/30 p-6 rounded-3xl shadow-2xl backdrop-blur-md space-y-6"
+              >
+                <div className="w-12 h-12 bg-[#c5a059]/10 border border-[#c5a059]/20 rounded-full flex items-center justify-center text-[#c5a059] mx-auto">
+                  <ShieldAlert className="w-6 h-6" />
+                </div>
+                <div className="space-y-2 text-center">
+                  <h4 className="text-lg font-bold text-white">Host Preview Mode</h4>
+                  <p className="text-xs text-white/60 leading-relaxed font-light">
+                    You are logged in as a Venue Host. Booking inquiries and date/time selections are disabled in preview mode.
+                  </p>
+                </div>
+                <hr className="border-white/10" />
+                <div className="space-y-3">
+                  <Button
+                    onClick={() => navigate('/my-venues')}
+                    className="w-full bg-[#c5a059] hover:bg-[#b08e4d] text-black font-semibold rounded-2xl h-11 text-xs transition-all"
+                  >
+                    Go to My Listings
+                  </Button>
+                  <Button
+                    onClick={() => navigate('/dashboard')}
+                    className="w-full bg-white/5 hover:bg-white/10 text-white rounded-2xl border border-white/10 h-11 text-xs transition-all"
+                  >
+                    Host Dashboard
+                  </Button>
+                </div>
+              </motion.div>
+            ) : (
+              <AnimatePresence mode="wait">
   {/* STEP 1: INITIAL RATE SHOWCASE */}
   {bookingStep === 'idle' && (
     <motion.div
@@ -519,15 +783,19 @@ export default function VenueDetail() {
       className="bg-[#0e0e12]/95 border border-white/10 p-6 rounded-3xl shadow-2xl backdrop-blur-md space-y-6"
     >
       <div>
-        <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Standard Daily Rate</span>
+        <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold">
+          {venue.bookingType === 'hours' ? 'Standard Hourly Rate' : 'Standard Daily Rate'}
+        </span>
         <div className="flex items-baseline gap-2 mt-1">
           <span className="text-4xl font-bold text-white">${venue.pricePerNight}</span>
-          <span className="text-sm text-white/50 font-medium">/ day</span>
+          <span className="text-sm text-white/50 font-medium">
+            {venue.bookingType === 'hours' ? ' / hour' : ' / day'}
+          </span>
         </div>
       </div>
-
+ 
       <hr className="border-white/10" />
-
+ 
       {/* Calculations */}
       <div className="space-y-3.5">
         <div className="flex justify-between text-sm text-white/70">
@@ -540,7 +808,9 @@ export default function VenueDetail() {
         </div>
         <hr className="border-white/10 border-dashed" />
         <div className="flex justify-between text-base">
-          <span className="font-medium text-white/90">Total (1 Day)</span>
+          <span className="font-medium text-white/90">
+            Total ({duration} {venue.bookingType === 'hours' ? 'Hour' + (duration !== 1 ? 's' : '') : 'Day' + (duration !== 1 ? 's' : '')})
+          </span>
           <span className="text-lg font-bold text-[#c5a059]">${totalPrice}</span>
         </div>
       </div>
@@ -570,52 +840,147 @@ export default function VenueDetail() {
     >
       <div className="space-y-1">
         <h4 className="text-lg font-bold text-white flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-[#c5a059]" /> Select Dates
+          <Calendar className="w-4 h-4 text-[#c5a059]" /> {venue.bookingType === 'hours' ? 'Select Date & Hours' : 'Select Dates'}
         </h4>
         <p className="text-xs text-white/40">Choose your execution windows for {venue.title}</p>
       </div>
-
+ 
       <hr className="border-white/10" />
+ 
+      {venue.bookingType === 'hours' ? (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-white/60 uppercase tracking-wider block">Booking Date</label>
+            <input 
+              type="date" 
+              value={selectedDate}
+              min={todayStr}
+              max={maxDateStr}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
+            />
+          </div>
 
-      <div className="space-y-4">
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-white/60 uppercase tracking-wider block">Check-In Date</label>
-          <input 
-            type="date" 
-            value={checkIn}
-            min={todayStr}
-            max={maxDateStr}
-            onChange={(e) => setCheckIn(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
-          />
+          {selectedDate && (
+            <div className="space-y-3 pt-2">
+              <div className="flex justify-between items-center text-[10px] text-white/50">
+                <span>Hours: {formatTime12h(venue.openingTime)} - {formatTime12h(venue.closingTime)}</span>
+                <span>Gap: {venue.cleaningGap} hr{venue.cleaningGap !== 1 && 's'}</span>
+              </div>
+
+              <div className="flex flex-wrap gap-2.5 text-[9px] text-white/50 pb-1">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-zinc-800 border border-white/5" /> Booked</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400" /> Cleaning</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-emerald-500/20 border border-emerald-500/30 text-emerald-400" /> Free</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-[#c5a059]" /> Selected</span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                {generateTimelineHours().map((slot, idx) => {
+                  const status = getSlotStatus(slot.start, slot.end);
+                  const isSelected = isSlotWithinSelectedRange(slot.start, slot.end);
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      disabled={status !== 'available'}
+                      onClick={() => handleSlotClick(slot.start, slot.end)}
+                      className={cn(
+                        "flex flex-col items-center justify-center p-1.5 rounded-lg text-[10px] border transition-all select-none text-center",
+                        isSelected
+                          ? "bg-[#c5a059] text-black border-[#c5a059] font-bold"
+                          : status === 'booked'
+                          ? "bg-zinc-800/50 text-white/20 border-white/5 cursor-not-allowed"
+                          : status === 'cleaning'
+                          ? "bg-amber-500/10 text-amber-400/50 border-amber-500/20 cursor-not-allowed"
+                          : "bg-emerald-500/5 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/15"
+                      )}
+                    >
+                      <span className="font-medium">{formatTime12h(slot.start)}</span>
+                      <span className="text-[8px] opacity-75">to {formatTime12h(slot.end)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="space-y-1">
+                  <label className="text-[9px] text-white/50 uppercase block">Start Time</label>
+                  <select
+                    value={startHour}
+                    onChange={(e) => setStartHour(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-2 py-1 text-xs text-white focus:outline-none"
+                  >
+                    <option value="" className="bg-[#0e0e12]">Select</option>
+                    {generateHourOptions().map(h => (
+                      <option key={h} value={h} className="bg-[#0e0e12]">{formatTime12h(h)}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] text-white/50 uppercase block">End Time</label>
+                  <select
+                    value={endHour}
+                    onChange={(e) => setEndHour(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-2 py-1 text-xs text-white focus:outline-none"
+                  >
+                    <option value="" className="bg-[#0e0e12]">Select</option>
+                    {generateHourOptions().map(h => (
+                      <option key={h} value={h} className="bg-[#0e0e12]">{formatTime12h(h)}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {hourBookingError && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl p-3 leading-relaxed font-light">
+              {hourBookingError}
+            </div>
+          )}
         </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-white/60 uppercase tracking-wider block">Check-In Date</label>
+            <input 
+              type="date" 
+              value={checkIn}
+              min={todayStr}
+              max={maxDateStr}
+              onChange={(e) => setCheckIn(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
+            />
+          </div>
+ 
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-white/60 uppercase tracking-wider block">Check-Out Date</label>
+            <input 
+              type="date" 
+              value={checkOut}
+              min={checkIn || todayStr}
+              max={maxDateStr}
+              onChange={(e) => setCheckOut(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
+            />
+          </div>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-white/60 uppercase tracking-wider block">Check-Out Date</label>
-          <input 
-            type="date" 
-            value={checkOut}
-            min={checkIn || todayStr}
-            max={maxDateStr}
-            onChange={(e) => setCheckOut(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
-          />
-        </div>
-      </div>
-
-      {bookingDatesError && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl p-3.5 leading-relaxed font-light">
-          {bookingDatesError}
+          {bookingDatesError && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl p-3.5 leading-relaxed font-light">
+              {bookingDatesError}
+            </div>
+          )}
         </div>
       )}
-
+ 
       <div className="bg-[#c5a059]/5 border border-[#c5a059]/10 text-white/70 text-[11px] rounded-xl p-3 flex items-start gap-2 leading-relaxed">
         <Info className="w-4 h-4 text-[#c5a059] flex-shrink-0 mt-0.5" />
         <span>
           <strong>Booking Window Limit:</strong> Only bookings scheduled within the next 30 days are accepted online. Other bookings can be arranged offline by contacting the host.
         </span>
       </div>
-
+ 
       <div className="flex items-center gap-3 pt-2">
         <Button
           onClick={() => setBookingStep('idle')}
@@ -624,7 +989,7 @@ export default function VenueDetail() {
           Back
         </Button>
         <Button
-          disabled={!checkIn || !checkOut || !!bookingDatesError}
+          disabled={venue.bookingType === 'hours' ? (!selectedDate || !startHour || !endHour || !!hourBookingError) : (!checkIn || !checkOut || !!bookingDatesError)}
           onClick={() => setBookingStep('payment')}
           className="flex-1 bg-[#c5a059] hover:bg-[#b08e4d] disabled:opacity-40 disabled:hover:bg-[#c5a059] text-black font-semibold rounded-xl text-xs h-11 transition-all"
         >
@@ -785,6 +1150,7 @@ export default function VenueDetail() {
     </motion.div>
   )}
 </AnimatePresence>
+            )}
           </div>
 
         </div>
