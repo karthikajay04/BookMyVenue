@@ -221,28 +221,28 @@ export default function HostBookings(): React.JSX.Element {
     if (bookingType === 'hours') {
       const startDateObj = new Date(start);
       const endDateObj = new Date(end);
-      
+
       const datePart = startDateObj.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
       });
-      
+
       const startHourStr = startDateObj.toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true
       });
-      
+
       const endHourStr = endDateObj.toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true
       });
-      
+
       return `${datePart}, ${startHourStr} - ${endHourStr}`;
     }
-    
+
     const s = new Date(start);
     const e = new Date(end);
     return `${formatDate(start)} to ${formatDate(end)}`;
@@ -434,7 +434,7 @@ export default function HostBookings(): React.JSX.Element {
                       <span className={cn(
                         "text-xl font-bold block",
                         isCancelled ? "text-white/40 line-through" : "text-[#c5a059]"
-                      )}>${booking.totalPrice.toLocaleString()}</span>
+                      )}>₹{booking.totalPrice.toLocaleString()}</span>
                       <span className="text-[9px] text-white/30 uppercase tracking-widest font-mono block mt-0.5">{booking.paymentStatus}</span>
                     </div>
 
@@ -548,7 +548,7 @@ export default function HostBookings(): React.JSX.Element {
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-white/40 font-medium">Total Payout Cost</span>
-                    <span className="text-sm font-bold text-[#c5a059]">${selectedBooking.totalPrice.toLocaleString()}</span>
+                    <span className="text-sm font-bold text-[#c5a059]">₹{selectedBooking.totalPrice.toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -637,7 +637,7 @@ export default function HostBookings(): React.JSX.Element {
                   {cancelBookingTarget.status === 'offline' ? (
                     <>This action is permanent and will unlock the dates on your calendar, allowing new online rentals.</>
                   ) : (
-                    <>The deposit amount of <strong>${cancelBookingTarget.totalPrice.toLocaleString()}</strong> will be refunded to the client. This action is permanent and frees up calendar dates.</>
+                    <>The deposit amount of <strong>₹{cancelBookingTarget.totalPrice.toLocaleString()}</strong> will be refunded to the client. This action is permanent and frees up calendar dates.</>
                   )}
                 </p>
               </div>

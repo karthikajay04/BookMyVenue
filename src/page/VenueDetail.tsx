@@ -18,24 +18,12 @@ export default function VenueDetail() {
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
   
-  const [bookingStep, setBookingStep] = useState<'idle' | 'date-selection' | 'payment' | 'success'>('idle');
-  const [checkIn, setCheckIn] = useState('');
-  const [checkOut, setCheckOut] = useState('');
   const [venue, setVenue] = useState<Venue | null>(null);
   const [isLoadingVenue, setIsLoadingVenue] = useState(true);
-  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
-  const [bookingError, setBookingError] = useState('');
-
-  // Renter contact details
-  const [renterName, setRenterName] = useState('');
-  const [renterPhone, setRenterPhone] = useState('');
-  const [renterEmail, setRenterEmail] = useState('');
 
   // Hours-based states
   const [bookedSlots, setBookedSlots] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [startHour, setStartHour] = useState('');
-  const [endHour, setEndHour] = useState('');
 
   // Fetch booked slots for the venue
   useEffect(() => {
@@ -53,7 +41,7 @@ export default function VenueDetail() {
     if (id) {
       fetchBookedSlots();
     }
-  }, [id, bookingStep]);
+  }, [id]);
 
   const parseTimeStr = (tStr: string) => {
     if (!tStr) return 0;
@@ -155,82 +143,15 @@ export default function VenueDetail() {
     return 'available';
   };
 
-  const getHourBookingError = () => {
-    if (venue?.bookingType !== 'hours') return '';
-    if (!selectedDate || !startHour || !endHour) return '';
-    const start = new Date(combineDateAndHour(selectedDate, startHour));
-    const end = new Date(combineDateAndHour(selectedDate, endHour));
-    
-    if (end <= start) {
-      return 'End time must be after start time.';
-    }
-    
-    // Check overlap
-    const hasOverlap = bookedSlots.some(b => {
-      const bStart = new Date(b.startDate);
-      const bEnd = new Date(b.endDate);
-      
-      const gapHours = Number(venue.cleaningGap || 0);
-      const limitNewEnd = new Date(end.getTime() + gapHours * 60 * 60 * 1000);
-      const limitExistingEnd = new Date(bEnd.getTime() + gapHours * 60 * 60 * 1000);
-      
-      return start < limitExistingEnd && bStart < limitNewEnd;
-    });
-    
-    if (hasOverlap) {
-      return 'The selected time range conflicts with an existing booking or its cleaning gap.';
-    }
-    
-    return '';
-  };
-
-  const hourBookingError = getHourBookingError();
-
-  // Date limit helpers for web bookings (only allowed within 30 days)
-  const todayStr = new Date().toISOString().split('T')[0];
-  const maxDate = new Date();
-  maxDate.setDate(maxDate.getDate() + 30);
-  const maxDateStr = maxDate.toISOString().split('T')[0];
-
-  const getBookingDatesError = () => {
-    if (!checkIn || !checkOut) return '';
-    const start = new Date(checkIn);
-    const end = new Date(checkOut);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    start.setHours(0, 0, 0, 0);
-    end.setHours(0, 0, 0, 0);
-
-    const limit = new Date(today);
-    limit.setDate(today.getDate() + 30);
-    limit.setHours(23, 59, 59, 999);
-
-    if (start < today) {
-      return 'Check-in date cannot be in the past.';
-    }
-    if (end < start) {
-      return 'Check-out date must be after check-in date.';
-    }
-    if (start > limit || end > limit) {
-      const formattedLimit = limit.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      return `Website bookings are only available for dates within the next 30 days (up to ${formattedLimit}). For future dates, please contact the venue owner for an offline booking.`;
-    }
-    return '';
-  };
-
-  const bookingDatesError = getBookingDatesError();
-
-  // Pre-fill user details from localStorage
+  // Load user details from localStorage
   useEffect(() => {
     const userStr = localStorage.getItem('user');
     if (userStr) {
       try {
         const userObj = JSON.parse(userStr);
         setCurrentUser(userObj);
-        setRenterName(userObj.name || '');
-        setRenterEmail(userObj.email || '');
       } catch (e) {
-        console.error('Failed to parse user details for booking pre-fill:', e);
+        console.error('Failed to parse user details:', e);
       }
     }
   }, []);
@@ -309,89 +230,15 @@ export default function VenueDetail() {
 
   const isHours = venue.bookingType === 'hours';
   
-  const getDurationInHours = (s: string, e: string) => {
-    if (!s || !e) return 1;
-    const [sh, sm] = s.split(':').map(Number);
-    const [eh, em] = e.split(':').map(Number);
-    const diff = (eh + em/60) - (sh + sm/60);
-    return diff > 0 ? diff : 1;
-  };
-  
-  const getDurationInDays = (s: string, e: string) => {
-    if (!s || !e) return 1;
-    const sDate = new Date(s);
-    const eDate = new Date(e);
-    const diffTime = Math.abs(eDate.getTime() - sDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays || 1;
-  };
-
-  const duration = isHours ? getDurationInHours(startHour, endHour) : getDurationInDays(checkIn, checkOut);
-  const basePrice = venue.pricePerNight * duration;
-  const serviceFee = Math.round(basePrice * 0.15);
-  const totalPrice = basePrice + serviceFee;
-
   const handleBook = () => {
     const token = localStorage.getItem('token');
     const user = localStorage.getItem('user');
     if (!token || !user) {
       // Redirect to login page and redirect back on success
-      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      navigate(`/login?redirect=${encodeURIComponent(`/book/${id}`)}`);
       return;
     }
-    setBookingStep('date-selection');
-  };
-
-  const handleAuthorizePayment = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
-      return;
-    }
-
-    if (!renterName || !renterPhone || !renterEmail) {
-      setBookingError('Please enter your name, phone number, and email address.');
-      return;
-    }
-
-    try {
-      setIsSubmittingBooking(true);
-      setBookingError('');
-
-      const finalStartDate = venue.bookingType === 'hours' ? combineDateAndHour(selectedDate, startHour) : checkIn;
-      const finalEndDate = venue.bookingType === 'hours' ? combineDateAndHour(selectedDate, endHour) : checkOut;
-
-      const response = await fetch('http://localhost:5000/api/bookings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          venueId: venue.id,
-          startDate: finalStartDate,
-          endDate: finalEndDate,
-          guests: venue.capacity, // default to venue capacity
-          totalPrice: totalPrice,
-          renterName,
-          renterPhone,
-          renterEmail
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to complete booking');
-      }
-
-      setBookingStep('success');
-    } catch (err: any) {
-      console.error('Booking error:', err);
-      setBookingError(err.message || 'An error occurred during booking checkout. Please try again.');
-    } finally {
-      setIsSubmittingBooking(false);
-    }
+    navigate(`/book/${id}`);
   };
 
   return (
@@ -710,7 +557,7 @@ export default function VenueDetail() {
  
                   {/* Calendar details footer */}
                   <p className="text-xs text-white/50 text-center font-light leading-relaxed pt-2 border-t border-white/5">
-                    This location has an active booking rate of <span className="text-white font-semibold">${venue.pricePerNight}/{venue.bookingType === 'hours' ? 'hour' : 'day'}</span>. 
+                    This location has an active booking rate of <span className="text-white font-semibold">₹{venue.pricePerNight}/{venue.bookingType === 'hours' ? 'hour' : 'day'}</span>. 
                     Dates highlighted in <span className="text-emerald-400 font-semibold">green</span> are open for booking.
                     {venue.bookingType === 'hours' && (
                       <span> Click on any day to select it and view available slots on the right widget.</span>
@@ -772,384 +619,55 @@ export default function VenueDetail() {
                 </div>
               </motion.div>
             ) : (
-              <AnimatePresence mode="wait">
-  {/* STEP 1: INITIAL RATE SHOWCASE */}
-  {bookingStep === 'idle' && (
-    <motion.div
-      key="idle-booking"
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -15 }}
-      className="bg-[#0e0e12]/95 border border-white/10 p-6 rounded-3xl shadow-2xl backdrop-blur-md space-y-6"
-    >
-      <div>
-        <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold">
-          {venue.bookingType === 'hours' ? 'Standard Hourly Rate' : 'Standard Daily Rate'}
-        </span>
-        <div className="flex items-baseline gap-2 mt-1">
-          <span className="text-4xl font-bold text-white">${venue.pricePerNight}</span>
-          <span className="text-sm text-white/50 font-medium">
-            {venue.bookingType === 'hours' ? ' / hour' : ' / day'}
-          </span>
-        </div>
-      </div>
- 
-      <hr className="border-white/10" />
- 
-      {/* Calculations */}
-      <div className="space-y-3.5">
-        <div className="flex justify-between text-sm text-white/70">
-          <span className="font-light">Base booking rate</span>
-          <span className="font-semibold text-white">${basePrice}</span>
-        </div>
-        <div className="flex justify-between text-sm text-white/70">
-          <span className="font-light">Service & cleaning fee (15%)</span>
-          <span className="font-semibold text-white">${serviceFee}</span>
-        </div>
-        <hr className="border-white/10 border-dashed" />
-        <div className="flex justify-between text-base">
-          <span className="font-medium text-white/90">
-            Total ({duration} {venue.bookingType === 'hours' ? 'Hour' + (duration !== 1 ? 's' : '') : 'Day' + (duration !== 1 ? 's' : '')})
-          </span>
-          <span className="text-lg font-bold text-[#c5a059]">${totalPrice}</span>
-        </div>
-      </div>
-
-      <Button
-        onClick={handleBook}
-        className="w-full group bg-[#c5a059] hover:bg-[#b08e4d] text-black font-semibold rounded-2xl h-12 shadow-lg shadow-[#c5a059]/10 border border-[#c5a059]/10 transition-all flex items-center justify-center gap-2 active:scale-98"
-      >
-        Confirm Booking Inquiry
-        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-      </Button>
-
-      <p className="text-[10px] text-center text-white/30 leading-relaxed font-light">
-        No charges will be placed yet. Host reviews all booking requests within 12 hours.
-      </p>
-    </motion.div>
-  )}
-
-  {/* STEP 2: DATE SELECTION MATRIX */}
-  {bookingStep === 'date-selection' && (
-    <motion.div
-      key="date-selection-booking"
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -15 }}
-      className="bg-[#0e0e12]/95 border border-white/10 p-6 rounded-3xl shadow-2xl backdrop-blur-md space-y-5"
-    >
-      <div className="space-y-1">
-        <h4 className="text-lg font-bold text-white flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-[#c5a059]" /> {venue.bookingType === 'hours' ? 'Select Date & Hours' : 'Select Dates'}
-        </h4>
-        <p className="text-xs text-white/40">Choose your execution windows for {venue.title}</p>
-      </div>
- 
-      <hr className="border-white/10" />
- 
-      {venue.bookingType === 'hours' ? (
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-white/60 uppercase tracking-wider block">Booking Date</label>
-            <input 
-              type="date" 
-              value={selectedDate}
-              min={todayStr}
-              max={maxDateStr}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
-            />
-          </div>
-
-          {selectedDate && (
-            <div className="space-y-3 pt-2">
-              <div className="flex justify-between items-center text-[10px] text-white/50">
-                <span>Hours: {formatTime12h(venue.openingTime)} - {formatTime12h(venue.closingTime)}</span>
-                <span>Gap: {venue.cleaningGap} hr{venue.cleaningGap !== 1 && 's'}</span>
-              </div>
-
-              <div className="flex flex-wrap gap-2.5 text-[9px] text-white/50 pb-1">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-zinc-800 border border-white/5" /> Booked</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400" /> Cleaning</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-emerald-500/20 border border-emerald-500/30 text-emerald-400" /> Free</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-[#c5a059]" /> Selected</span>
-              </div>
-
-              <div className="grid grid-cols-3 gap-1.5 max-h-36 overflow-y-auto pr-1">
-                {generateTimelineHours().map((slot, idx) => {
-                  const status = getSlotStatus(slot.start, slot.end);
-                  const isSelected = isSlotWithinSelectedRange(slot.start, slot.end);
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      disabled={status !== 'available'}
-                      onClick={() => handleSlotClick(slot.start, slot.end)}
-                      className={cn(
-                        "flex flex-col items-center justify-center p-1.5 rounded-lg text-[10px] border transition-all select-none text-center",
-                        isSelected
-                          ? "bg-[#c5a059] text-black border-[#c5a059] font-bold"
-                          : status === 'booked'
-                          ? "bg-zinc-800/50 text-white/20 border-white/5 cursor-not-allowed"
-                          : status === 'cleaning'
-                          ? "bg-amber-500/10 text-amber-400/50 border-amber-500/20 cursor-not-allowed"
-                          : "bg-emerald-500/5 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/15"
-                      )}
-                    >
-                      <span className="font-medium">{formatTime12h(slot.start)}</span>
-                      <span className="text-[8px] opacity-75">to {formatTime12h(slot.end)}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <div className="space-y-1">
-                  <label className="text-[9px] text-white/50 uppercase block">Start Time</label>
-                  <select
-                    value={startHour}
-                    onChange={(e) => setStartHour(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-2 py-1 text-xs text-white focus:outline-none"
-                  >
-                    <option value="" className="bg-[#0e0e12]">Select</option>
-                    {generateHourOptions().map(h => (
-                      <option key={h} value={h} className="bg-[#0e0e12]">{formatTime12h(h)}</option>
-                    ))}
-                  </select>
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-[#0e0e12]/95 border border-white/10 p-6 rounded-3xl shadow-2xl backdrop-blur-md space-y-6"
+              >
+                <div>
+                  <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold">
+                    {venue.bookingType === 'hours' ? 'Standard Hourly Rate' : 'Standard Daily Rate'}
+                  </span>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-4xl font-bold text-white">₹{venue.pricePerNight}</span>
+                    <span className="text-sm text-white/55 font-medium">
+                      {venue.bookingType === 'hours' ? ' / hour' : ' / day'}
+                    </span>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[9px] text-white/50 uppercase block">End Time</label>
-                  <select
-                    value={endHour}
-                    onChange={(e) => setEndHour(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-2 py-1 text-xs text-white focus:outline-none"
-                  >
-                    <option value="" className="bg-[#0e0e12]">Select</option>
-                    {generateHourOptions().map(h => (
-                      <option key={h} value={h} className="bg-[#0e0e12]">{formatTime12h(h)}</option>
-                    ))}
-                  </select>
+
+                <hr className="border-white/10" />
+
+                <div className="space-y-4">
+                  <h4 className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Included Services</h4>
+                  <ul className="space-y-2.5 text-xs text-white/70 font-light">
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#c5a059]" />
+                      <span>Instant Booking Verification</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#c5a059]" />
+                      <span>Mandatory Cleaning gap intervals</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#c5a059]" />
+                      <span>Dedicated host assistance support</span>
+                    </li>
+                  </ul>
                 </div>
-              </div>
-            </div>
-          )}
 
-          {hourBookingError && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl p-3 leading-relaxed font-light">
-              {hourBookingError}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-white/60 uppercase tracking-wider block">Check-In Date</label>
-            <input 
-              type="date" 
-              value={checkIn}
-              min={todayStr}
-              max={maxDateStr}
-              onChange={(e) => setCheckIn(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
-            />
-          </div>
- 
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-white/60 uppercase tracking-wider block">Check-Out Date</label>
-            <input 
-              type="date" 
-              value={checkOut}
-              min={checkIn || todayStr}
-              max={maxDateStr}
-              onChange={(e) => setCheckOut(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
-            />
-          </div>
+                <Button
+                  onClick={handleBook}
+                  className="w-full group bg-[#c5a059] hover:bg-[#b08e4d] text-black font-semibold rounded-2xl h-12 shadow-lg shadow-[#c5a059]/10 border border-[#c5a059]/10 transition-all flex items-center justify-center gap-2 active:scale-98"
+                >
+                  Book Venue Now
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </Button>
 
-          {bookingDatesError && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl p-3.5 leading-relaxed font-light">
-              {bookingDatesError}
-            </div>
-          )}
-        </div>
-      )}
- 
-      <div className="bg-[#c5a059]/5 border border-[#c5a059]/10 text-white/70 text-[11px] rounded-xl p-3 flex items-start gap-2 leading-relaxed">
-        <Info className="w-4 h-4 text-[#c5a059] flex-shrink-0 mt-0.5" />
-        <span>
-          <strong>Booking Window Limit:</strong> Only bookings scheduled within the next 30 days are accepted online. Other bookings can be arranged offline by contacting the host.
-        </span>
-      </div>
- 
-      <div className="flex items-center gap-3 pt-2">
-        <Button
-          onClick={() => setBookingStep('idle')}
-          className="flex-1 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 text-xs font-medium h-11"
-        >
-          Back
-        </Button>
-        <Button
-          disabled={venue.bookingType === 'hours' ? (!selectedDate || !startHour || !endHour || !!hourBookingError) : (!checkIn || !checkOut || !!bookingDatesError)}
-          onClick={() => setBookingStep('payment')}
-          className="flex-1 bg-[#c5a059] hover:bg-[#b08e4d] disabled:opacity-40 disabled:hover:bg-[#c5a059] text-black font-semibold rounded-xl text-xs h-11 transition-all"
-        >
-          Continue
-        </Button>
-      </div>
-    </motion.div>
-  )}
-
-  {/* STEP 3: PREMIUM PAYMENT INTERFACE */}
-  {bookingStep === 'payment' && (
-    <motion.div
-      key="payment-booking"
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -15 }}
-      className="bg-[#0e0e12]/95 border border-white/10 p-6 rounded-3xl shadow-2xl backdrop-blur-md space-y-5"
-    >
-      <div className="space-y-1">
-        <h4 className="text-lg font-bold text-white flex items-center gap-2">
-          <Info className="w-4 h-4 text-[#c5a059]" /> Secure Checkout
-        </h4>
-        <p className="text-xs text-white/40">Provide authorization guarantees</p>
-      </div>
-
-      <hr className="border-white/10" />
-
-      <div className="space-y-3">
-        {/* Renter Contact details */}
-        <div className="space-y-1">
-          <label className="text-[10px] text-white/40 uppercase tracking-widest block">Your Full Name *</label>
-          <input 
-            type="text" 
-            value={renterName}
-            onChange={(e) => setRenterName(e.target.value)}
-            placeholder="John Doe"
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label className="text-[10px] text-white/40 uppercase tracking-widest block">Phone Number *</label>
-            <input 
-              type="tel" 
-              value={renterPhone}
-              onChange={(e) => setRenterPhone(e.target.value)}
-              placeholder="e.g. +1 555-0199"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[10px] text-white/40 uppercase tracking-widest block">Email Address *</label>
-            <input 
-              type="email" 
-              value={renterEmail}
-              onChange={(e) => setRenterEmail(e.target.value)}
-              placeholder="e.g. john@example.com"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
-            />
-          </div>
-        </div>
-
-        <hr className="border-white/10 my-2" />
-
-        <div className="space-y-1">
-          <label className="text-[10px] text-white/40 uppercase tracking-widest block">Cardholder Name</label>
-          <input 
-            type="text" 
-            placeholder="John Doe"
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a059]/50"
-          />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] text-white/40 uppercase tracking-widest block">Card Number</label>
-          <input 
-            type="text" 
-            placeholder="0000 0000 0000 0000"
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a059]/50"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label className="text-[10px] text-white/40 uppercase tracking-widest block">Expiration</label>
-            <input type="text" placeholder="MM/YY" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-[#c5a059]/50" />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[10px] text-white/40 uppercase tracking-widest block">CVC</label>
-            <input type="text" placeholder="123" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-[#c5a059]/50" />
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3 flex justify-between items-center text-xs">
-        <span className="text-white/60">Final Authorization amount:</span>
-        <span className="font-bold text-[#c5a059] text-sm">${totalPrice}</span>
-      </div>
-
-      {bookingError && (
-        <p className="text-red-500 text-xs font-semibold text-center mt-1">
-          {bookingError}
-        </p>
-      )}
-
-      <div className="flex items-center gap-3 pt-1">
-        <Button
-          disabled={isSubmittingBooking}
-          onClick={() => setBookingStep('date-selection')}
-          className="flex-1 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 text-xs font-medium h-11"
-        >
-          Back
-        </Button>
-        <Button
-          disabled={isSubmittingBooking || !renterName || !renterPhone || !renterEmail}
-          onClick={handleAuthorizePayment}
-          className="flex-1 bg-[#c5a059] hover:bg-[#b08e4d] disabled:opacity-40 disabled:hover:bg-[#c5a059] text-black font-semibold rounded-xl text-xs h-11 flex items-center justify-center gap-2"
-        >
-          {isSubmittingBooking ? (
-            <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-          ) : (
-            'Authorize Card'
-          )}
-        </Button>
-      </div>
-    </motion.div>
-  )}
-
-  {/* STEP 4: SUCCESS RECEIPT SUMMARY */}
-  {bookingStep === 'success' && (
-    <motion.div
-      key="success-booking"
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className="bg-[#c5a059]/10 border border-[#c5a059]/25 p-6 rounded-3xl text-center flex flex-col items-center justify-center space-y-4 shadow-2xl backdrop-blur-md"
-    >
-      <div className="flex items-center justify-center w-14 h-14 rounded-full bg-[#c5a059]/20 border border-[#c5a059]/30 shadow-inner">
-        <CheckCircle className="w-7 h-7 text-[#c5a059] animate-pulse" />
-      </div>
-      <div>
-        <h4 className="text-lg font-bold text-white">Inquiry Submitted!</h4>
-        <p className="text-xs text-[#c5a059] font-medium mt-1">
-          Our coordinator has received your request.
-        </p>
-      </div>
-      <p className="text-xs text-white/70 leading-relaxed font-light max-w-xs">
-        A personalized offer and final invoice will be emailed directly to you from <span className="underline font-normal text-white">booking@{venue.title.toLowerCase().replace(/\s+/g, '')}.com</span> to finalize the itinerary.
-      </p>
-      <Button
-        onClick={() => {
-          setBookingStep('idle');
-          setCheckIn('');
-          setCheckOut('');
-        }}
-        className="w-full bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl py-2 h-10 text-xs font-semibold"
-      >
-        Back to Rate Details
-      </Button>
-    </motion.div>
-  )}
-</AnimatePresence>
+                <p className="text-[10px] text-center text-white/30 leading-relaxed font-light">
+                  You will select your dates, verify availability slots, and finalize booking parameters in the next steps.
+                </p>
+              </motion.div>
             )}
           </div>
 

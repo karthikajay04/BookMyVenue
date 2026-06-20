@@ -5,6 +5,7 @@ import Contact from './page/Contact';
 import Login from './page/Login';
 import Signup from './page/Signup';
 import VenueDetail from './page/VenueDetail';
+import BookVenue from './page/BookVenue';
 import AddVenue from './page/AddVenue';
 import Bookings from './page/UserBookings';
 import MyVenues from './page/MyVenues';
@@ -45,6 +46,7 @@ function App() {
         <Route path="/" element={<NonAdminRoute><Home /></NonAdminRoute>} />
         <Route path="/venues" element={<NonAdminRoute><Venues /></NonAdminRoute>} />
         <Route path="/venue/:id" element={<NonAdminRoute><VenueDetail /></NonAdminRoute>} />
+        <Route path="/book/:id" element={<NonAdminRoute><BookVenue /></NonAdminRoute>} />
         <Route path="/addvenues" element={<NonAdminRoute><AddVenue /></NonAdminRoute>} />
         <Route path="/my-venues" element={<NonAdminRoute><MyVenues /></NonAdminRoute>} />
         <Route path="/my-venues/:id" element={<NonAdminRoute><HostVenueDetail /></NonAdminRoute>} />

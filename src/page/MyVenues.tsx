@@ -245,7 +245,7 @@ export default function MyVenues() {
                       {venue.bookingType === 'hours' ? 'Hourly Rate' : 'Daily Rate'}
                     </span>
                     <span className="text-2xl font-bold text-[#c5a059]">
-                      ${venue.pricePerNight}
+                      ₹{venue.pricePerNight}
                       <span className="text-[10px] text-white/50 font-normal">
                         {venue.bookingType === 'hours' ? ' / hr' : ' / night'}
                       </span>

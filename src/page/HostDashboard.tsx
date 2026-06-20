@@ -400,7 +400,7 @@ export default function HostDashboard(): React.JSX.Element {
               <TrendingUp className="w-16 h-16 text-[#c5a059]" />
             </div>
             <span className="text-xs text-white/50 font-medium tracking-wider uppercase">Earnings This Month</span>
-            <h3 className="text-3xl font-bold text-[#c5a059] mt-2">${thisMonthEarnings.toLocaleString()}</h3>
+            <h3 className="text-3xl font-bold text-[#c5a059] mt-2">₹{thisMonthEarnings.toLocaleString()}</h3>
             <p className="text-[10px] text-white/40 mt-2">Active online/offline reservations</p>
           </div>
 
@@ -489,7 +489,7 @@ export default function HostDashboard(): React.JSX.Element {
                       >
                         {venues.map((v) => (
                           <option key={v.id} value={v.id} className="bg-[#0e0e12] text-white">
-                            {v.title} (${v.pricePerNight}/night)
+                            {v.title} (₹{v.pricePerNight}/{v.bookingType === 'hours' ? 'hr' : 'night'})
                           </option>
                         ))}
                       </select>
@@ -602,7 +602,7 @@ export default function HostDashboard(): React.JSX.Element {
                   {/* Optional Financial Details */}
                   <div className="grid grid-cols-2 gap-4 pt-1">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Offline Revenue ($)</label>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Offline Revenue (₹)</label>
                       <input
                         type="number"
                         value={lockRevenue || ''}
@@ -789,7 +789,7 @@ export default function HostDashboard(): React.JSX.Element {
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-white/40 font-medium">Associated Revenue</span>
-                    <span className="text-sm font-bold text-[#c5a059]">${Number(selectedBooking.totalPrice).toLocaleString()}</span>
+                    <span className="text-sm font-bold text-[#c5a059]">₹{Number(selectedBooking.totalPrice).toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -908,7 +908,7 @@ export default function HostDashboard(): React.JSX.Element {
                 <p className="text-[10px] text-red-400/80 bg-red-950/10 border border-red-500/10 p-2.5 rounded-lg font-light leading-normal">
                   {cancelTarget.status === 'offline'
                     ? "This block will be removed. The slot will become available for public online bookings on our portal immediately."
-                    : `This reservation is for renter ${cancelTarget.renterName}. Cancelling it will trigger a full refund of $${cancelTarget.totalPrice.toLocaleString()}.`}
+                    : `This reservation is for renter ${cancelTarget.renterName}. Cancelling it will trigger a full refund of ₹{cancelTarget.totalPrice.toLocaleString()}.`}
                 </p>
               </div>
               <div className="flex gap-3 pt-2">

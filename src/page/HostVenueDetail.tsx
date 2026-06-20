@@ -1216,7 +1216,7 @@ export default function HostVenueDetail() {
                         {bookingType === 'hours' ? 'Standard Hourly Rate *' : 'Standard Daily Rate *'}
                       </label>
                       <div className="relative rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5 flex items-center">
-                        <span className="text-sm text-white/50 mr-1.5">$</span>
+                        <span className="text-sm text-white/50 mr-1.5">₹</span>
                         <input
                           type="number"
                           value={pricePerNight === 0 ? '' : pricePerNight}
@@ -1237,16 +1237,16 @@ export default function HostVenueDetail() {
                     <div className="space-y-3 text-xs">
                       <div className="flex justify-between text-white/70">
                         <span className="font-light">Base booking rate</span>
-                        <span className="font-semibold text-white">${basePrice}</span>
+                        <span className="font-semibold text-white">₹{basePrice}</span>
                       </div>
                       <div className="flex justify-between text-white/70">
                         <span className="font-light">Service & cleaning fee (15%)</span>
-                        <span className="font-semibold text-white">${serviceFee}</span>
+                        <span className="font-semibold text-white">₹{serviceFee}</span>
                       </div>
                       <hr className="border-white/10 border-dashed" />
                       <div className="flex justify-between text-sm">
                         <span className="font-medium text-white/80">Total ({bookingType === 'hours' ? '1 Hour' : '1 Day'})</span>
-                        <span className="text-base font-extrabold text-[#c5a059]">${totalPrice}</span>
+                        <span className="text-base font-extrabold text-[#c5a059]">₹{totalPrice}</span>
                       </div>
                     </div>
                   </div>

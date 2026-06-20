@@ -181,7 +181,7 @@ export default function HostVenueBookings() {
             </div>
             <div className="bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
               <span className="text-[10px] text-white/40 block font-semibold uppercase tracking-wider">Revenue</span>
-              <span className="text-2xl font-bold text-[#c5a059] mt-1 block">${totalRevenue.toLocaleString()}</span>
+              <span className="text-2xl font-bold text-[#c5a059] mt-1 block">₹{totalRevenue.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -208,7 +208,7 @@ export default function HostVenueBookings() {
                 <div key={b.id} className="bg-white/[0.02] border border-white/5 p-4 rounded-2xl text-xs space-y-3.5 hover:border-[#c5a059]/30 transition-colors leading-relaxed">
                   <div className="flex justify-between items-start font-semibold gap-2">
                     <span className="text-white text-sm font-bold truncate">{b.renterName || 'Offline Date Block'}</span>
-                    <span className="text-sm font-bold text-[#c5a059] flex-shrink-0">${b.totalPrice}</span>
+                    <span className="text-sm font-bold text-[#c5a059] flex-shrink-0">₹{b.totalPrice}</span>
                   </div>
                   
                   <div className="space-y-1.5 text-white/60">

@@ -288,7 +288,14 @@ export default function Venues() {
               capacity={venue.capacity}
               eventTypes={venue.eventTypes}
               className="border-white/10 bg-black/40 backdrop-blur-md shadow-2xl hover:border-[#c5a059]/40"
-              onClick={() => navigate('/venue/' + venue.id)}
+              onClick={() => {
+                const user = JSON.parse(localStorage.getItem('user') || 'null');
+                if (user?.role === 'venue_owner') {
+                  navigate('/my-venues/' + venue.id);
+                } else {
+                  navigate('/venue/' + venue.id);
+                }
+              }}
             />
           ))}
           {filteredAndSortedVenues.length === 0 && (
