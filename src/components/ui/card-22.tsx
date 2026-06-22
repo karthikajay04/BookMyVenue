@@ -91,13 +91,6 @@ export const PlaceCard = ({
       viewport={{ once: true, amount: 0.3 }}
       transition={{ duration: 0.5 }}
       variants={contentVariants}
-      // --- NEW: Added hover animation ---
-      whileHover={{
-        scale: 1.03,
-        boxShadow: '0px 10px 30px -5px hsl(var(--foreground) / 0.1)',
-        transition: { type: 'spring', stiffness: 300, damping: 20 }
-      }}
-      // --- END NEW ---
       className={cn(
         'w-full max-w-sm overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-lg cursor-pointer',
         className

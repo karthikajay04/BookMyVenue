@@ -5,7 +5,7 @@ dotenv.config();
 
 const { Pool } = pg;
 
-// Establish database connection pool
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
@@ -20,7 +20,7 @@ pool.on('error', (err) => {
   process.exit(-1);
 });
 
-// Helper function to run database queries
+
 export const query = (text, params) => pool.query(text, params);
 
 export default pool;

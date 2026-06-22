@@ -21,6 +21,13 @@ export default function AdminDashboard() {
   
   const [selectedVenue, setSelectedVenue] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [decliningVenueId, setDecliningVenueId] = useState<string | null>(null);
+  const [rejectionReasonInput, setRejectionReasonInput] = useState("");
+
+  const triggerDecline = (venueId: string) => {
+    setDecliningVenueId(venueId);
+    setRejectionReasonInput("");
+  };
   const [errorMsg, setErrorMsg] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
@@ -94,7 +101,7 @@ export default function AdminDashboard() {
   }, [token]);
 
   // Handle Approve/Decline actions
-  const handleUpdateStatus = async (venueId: string, newStatus: "approved" | "declined") => {
+  const handleUpdateStatus = async (venueId: string, newStatus: "approved" | "declined", reason?: string) => {
     try {
       const response = await fetch(`http://localhost:5000/api/admin/venues/${venueId}/status`, {
         method: "PUT",
@@ -102,7 +109,7 @@ export default function AdminDashboard() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ status: newStatus, rejectionReason: reason || "" })
       });
 
       if (!response.ok) {
@@ -268,14 +275,6 @@ export default function AdminDashboard() {
         {/* Sidebar Footer */}
         <div className="p-4 border-t border-white/5 space-y-2">
           <button
-            onClick={() => navigate("/")}
-            className="w-full flex items-center gap-2.5 text-xs text-white/60 hover:text-white px-4 py-2.5 rounded-lg hover:bg-white/5 transition-all"
-          >
-            <ArrowRight className="w-4 h-4 rotate-180 text-white/40" />
-            Return to Portal
-          </button>
-          
-          <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2.5 text-xs text-red-400/80 hover:text-red-400 px-4 py-2.5 rounded-lg hover:bg-red-500/10 transition-all"
           >
@@ -297,14 +296,6 @@ export default function AdminDashboard() {
             >
               <Menu className="w-5 h-5" />
             </button>
-
-            <div className="flex items-center gap-2 text-white/40 text-xs font-semibold">
-              <span className="hidden sm:inline">Admin Control Panel</span>
-              <span className="hidden sm:inline">/</span>
-              <span className="text-[#c5a059] capitalize">
-                {activeTab === "approvals" ? "Venue Approvals" : activeTab === "venues" ? "All Venues" : activeTab === "bookings" ? "All Bookings" : "Users Directory"}
-              </span>
-            </div>
           </div>
 
           <div className="flex items-center gap-4">
@@ -344,12 +335,9 @@ export default function AdminDashboard() {
           )}
 
           {/* Dashboard Financial & Count KPIs */}
-          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
             {/* Earnings Card */}
-            <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-[#c5a059]/30 transition-all">
-              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <DollarSign className="w-24 h-24 text-white" />
-              </div>
+            <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden group transition-all">
               <p className="text-xs uppercase tracking-wider text-white/50 font-semibold mb-2">Total Financial Volume</p>
               <h3 className="text-3xl font-normal text-white mb-2 font-mono">
                 ₹{stats ? stats.totalVolume.toLocaleString() : "0"}
@@ -360,10 +348,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Platform Share */}
-            <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-[#c5a059]/30 transition-all">
-              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Shield className="w-24 h-24 text-white" />
-              </div>
+            <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden group transition-all">
               <p className="text-xs uppercase tracking-wider text-white/50 font-semibold mb-2">Platform Revenue (10%)</p>
               <h3 className="text-3xl font-bold text-[#c5a059] mb-2 font-mono">
                 ₹{stats ? stats.platformEarnings.toLocaleString() : "0"}
@@ -374,10 +359,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Host Payout Share */}
-            <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-[#c5a059]/30 transition-all">
-              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Users className="w-24 h-24 text-white" />
-              </div>
+            <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden group transition-all">
               <p className="text-xs uppercase tracking-wider text-white/50 font-semibold mb-2">Venue Owners Share (90%)</p>
               <h3 className="text-3xl font-normal text-white mb-2 font-mono">
                 ₹{stats ? stats.hostEarnings.toLocaleString() : "0"}
@@ -385,22 +367,6 @@ export default function AdminDashboard() {
               <p className="text-xs text-white/40">
                 Total payouts disbursed to hosts
               </p>
-            </div>
-
-            {/* Active Members Count */}
-            <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-[#c5a059]/30 transition-all">
-              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Home className="w-24 h-24 text-white" />
-              </div>
-              <p className="text-xs uppercase tracking-wider text-white/50 font-semibold mb-2">Venues & Platform Users</p>
-              <h3 className="text-3xl font-normal text-white mb-2 font-mono">
-                {stats ? `${stats.totalVenues} V | ${stats.totalUsers + stats.totalHosts} U` : "0 / 0"}
-              </h3>
-              <div className="text-xs text-white/40 flex items-center gap-2">
-                <span className="text-[#c5a059] font-bold">{stats?.pendingVenues || 0} Pending approvals</span>
-                <span>•</span>
-                <span>{stats?.totalHosts || 0} Host owners</span>
-              </div>
             </div>
           </section>
 
@@ -485,7 +451,7 @@ export default function AdminDashboard() {
                                 Approve
                               </button>
                               <button
-                                onClick={() => handleUpdateStatus(venue.id, "declined")}
+                                onClick={() => triggerDecline(venue.id)}
                                 className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg border border-red-500/20 hover:scale-102 transition-all flex items-center gap-1 text-xs font-semibold"
                               >
                                 <XCircle className="w-3.5 h-3.5" />
@@ -646,7 +612,7 @@ export default function AdminDashboard() {
                                 View
                               </button>
                               <button
-                                onClick={() => handleUpdateStatus(venue.id, venue.status === "approved" ? "declined" : "approved")}
+                                onClick={() => venue.status === "approved" ? triggerDecline(venue.id) : handleUpdateStatus(venue.id, "approved")}
                                 className={`text-[10px] border px-2 py-1 rounded-lg font-bold transition-all ${
                                   venue.status === "approved"
                                     ? "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20"
@@ -1034,8 +1000,7 @@ export default function AdminDashboard() {
                 <div className="flex justify-end gap-3 pt-6 border-t border-white/5">
                   <button
                     onClick={() => {
-                      handleUpdateStatus(selectedVenue.id, "declined");
-                      setSelectedVenue(null);
+                      triggerDecline(selectedVenue.id);
                     }}
                     className="px-5 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-semibold text-sm rounded-xl border border-red-500/20 transition-all flex items-center gap-2"
                   >
@@ -1055,6 +1020,66 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Decline Reason Modal */}
+      {decliningVenueId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setDecliningVenueId(null)}
+          />
+          
+          {/* Modal Box */}
+          <div className="relative bg-[#0e0e12] border border-white/10 rounded-3xl w-full max-w-md p-6 shadow-2xl z-10 text-white space-y-4">
+            <div className="flex items-center gap-3 text-red-400">
+              <div className="bg-red-500/10 p-2 rounded-xl border border-red-500/20">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-bold">Reject Venue Request</h3>
+            </div>
+            
+            <p className="text-xs text-white/60 font-light leading-relaxed">
+              Please specify the reason for declining this venue request. This explanation will be displayed to the venue owner on their dashboard.
+            </p>
+            
+            <div className="space-y-1.5">
+              <label htmlFor="rejectionReason" className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Rejection Reason *</label>
+              <textarea
+                id="rejectionReason"
+                value={rejectionReasonInput}
+                onChange={(e) => setRejectionReasonInput(e.target.value)}
+                placeholder="e.g. Please upload higher quality photos of the interior space."
+                rows={4}
+                required
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white placeholder-white/20 focus:outline-none focus:border-red-500/50 transition-colors resize-none"
+              />
+            </div>
+            
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDecliningVenueId(null)}
+                className="flex-1 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 text-xs font-semibold h-11 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!rejectionReasonInput.trim()}
+                onClick={() => {
+                  handleUpdateStatus(decliningVenueId, "declined", rejectionReasonInput.trim());
+                  setDecliningVenueId(null);
+                  setSelectedVenue(null);
+                }}
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:hover:bg-red-600 text-white font-semibold rounded-xl text-xs h-11 transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-red-600/20"
+              >
+                Confirm Decline
+              </button>
             </div>
           </div>
         </div>

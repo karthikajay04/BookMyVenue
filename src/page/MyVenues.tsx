@@ -201,7 +201,7 @@ export default function MyVenues() {
             {venues.map((venue) => (
               <div
                 key={venue.id}
-                className="bg-[#0e0e12]/80 border border-white/10 hover:border-[#c5a059]/35 rounded-3xl p-6 flex flex-col md:flex-row gap-6 items-center justify-between transition-all duration-300 shadow-xl backdrop-blur-md group"
+                className="bg-[#0e0e12]/80 border border-white/10 rounded-3xl p-6 flex flex-col md:flex-row gap-6 items-center justify-between transition-all duration-300 shadow-xl backdrop-blur-md group"
               >
                 {/* Visual Details */}
                 <div className="flex flex-col sm:flex-row items-center gap-5 w-full md:w-[75%]">
@@ -217,9 +217,35 @@ export default function MyVenues() {
                       </div>
                     )}
                   </div>
-                  <div className="text-center sm:text-left space-y-2.5 min-w-0">
-                    <h3 className="text-xl font-bold text-white truncate">{venue.title}</h3>
+                  <div className="text-center sm:text-left space-y-2.5 w-full min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <h3 className="text-xl font-bold text-white truncate">{venue.title}</h3>
+                      <span className={cn(
+                        "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border self-center sm:self-auto",
+                        venue.status === "approved"
+                          ? "bg-green-500/10 text-green-400 border-green-500/20"
+                          : venue.status === "declined"
+                          ? "bg-red-500/10 text-red-400 border-red-500/20"
+                          : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                      )}>
+                        <span className={cn(
+                          "w-1.5 h-1.5 rounded-full",
+                          venue.status === "approved" ? "bg-green-400" : venue.status === "declined" ? "bg-red-400" : "bg-yellow-400"
+                        )} />
+                        {venue.status ? venue.status.toUpperCase() : 'PENDING'}
+                      </span>
+                    </div>
                     <p className="text-white/60 text-xs font-light line-clamp-2">{venue.description}</p>
+
+                    {venue.status === 'declined' && venue.rejectionReason && (
+                      <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-xs text-red-400 text-left mt-2 flex items-start gap-2 max-w-xl">
+                        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <span className="font-bold">Declined Reason: </span>
+                          <span className="opacity-90">{venue.rejectionReason}</span>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-xs text-white/50 pt-1">
                       <div className="flex items-center gap-1">

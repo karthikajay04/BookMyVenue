@@ -395,30 +395,21 @@ export default function HostDashboard(): React.JSX.Element {
         {/* Metrics Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
           {/* Card 1: Monthly Earnings */}
-          <div className="bg-[#0e0e12]/80 border border-white/10 rounded-2xl p-5 backdrop-blur-md relative overflow-hidden group hover:border-[#c5a059]/40 transition-colors">
-            <div className="absolute top-0 right-0 p-3 opacity-15">
-              <TrendingUp className="w-16 h-16 text-[#c5a059]" />
-            </div>
+          <div className="bg-[#0e0e12]/80 border border-white/10 rounded-2xl p-5 backdrop-blur-md relative overflow-hidden group transition-colors">
             <span className="text-xs text-white/50 font-medium tracking-wider uppercase">Earnings This Month</span>
             <h3 className="text-3xl font-bold text-[#c5a059] mt-2">₹{thisMonthEarnings.toLocaleString()}</h3>
             <p className="text-[10px] text-white/40 mt-2">Active online/offline reservations</p>
           </div>
 
           {/* Card 2: Total Bookings */}
-          <div className="bg-[#0e0e12]/80 border border-white/10 rounded-2xl p-5 backdrop-blur-md relative overflow-hidden group hover:border-[#c5a059]/40 transition-colors">
-            <div className="absolute top-0 right-0 p-3 opacity-15">
-              <CalendarRange className="w-16 h-16 text-[#c5a059]" />
-            </div>
+          <div className="bg-[#0e0e12]/80 border border-white/10 rounded-2xl p-5 backdrop-blur-md relative overflow-hidden group transition-colors">
             <span className="text-xs text-white/50 font-medium tracking-wider uppercase">Total Bookings</span>
             <h3 className="text-3xl font-bold text-white mt-2">{bookings.length}</h3>
             <p className="text-[10px] text-white/40 mt-2">Includes offline blocked periods</p>
           </div>
 
           {/* Card 3: Active Listings */}
-          <div className="bg-[#0e0e12]/80 border border-white/10 rounded-2xl p-5 backdrop-blur-md relative overflow-hidden group hover:border-[#c5a059]/40 transition-colors">
-            <div className="absolute top-0 right-0 p-3 opacity-15">
-              <Building className="w-16 h-16 text-[#c5a059]" />
-            </div>
+          <div className="bg-[#0e0e12]/80 border border-white/10 rounded-2xl p-5 backdrop-blur-md relative overflow-hidden group transition-colors">
             <span className="text-xs text-white/50 font-medium tracking-wider uppercase">Active Listings</span>
             <h3 className="text-3xl font-bold text-white mt-2">{venues.length}</h3>
             <p className="text-[10px] text-white/40 mt-2">Spaces hosted under your account</p>
@@ -432,12 +423,9 @@ export default function HostDashboard(): React.JSX.Element {
               "text-left bg-[#0e0e12]/80 border rounded-2xl p-5 backdrop-blur-md relative overflow-hidden group transition-all w-full select-none cursor-pointer",
               isLockingFormOpen
                 ? "border-[#c5a059] bg-[#c5a059]/10 shadow-lg shadow-[#c5a059]/10"
-                : "border-white/10 hover:border-[#c5a059]/40"
+                : "border-white/10"
             )}
           >
-            <div className="absolute top-0 right-0 p-3 opacity-15">
-              <Lock className="w-16 h-16 text-[#c5a059]" />
-            </div>
             <span className="text-xs text-white/50 font-medium tracking-wider uppercase">Offline Locking</span>
             <h3 className="text-xl font-bold text-white mt-2 flex items-center gap-2">
               {isLockingFormOpen ? 'Lock Form Open' : 'Block Dates'}
@@ -660,7 +648,7 @@ export default function HostDashboard(): React.JSX.Element {
         </AnimatePresence>
 
         {/* Interactive Booking Calendar Section */}
-        <div className="bg-[#0e0e12]/80 border border-white/10 rounded-2xl p-6 backdrop-blur-md shadow-2xl relative overflow-hidden group hover:border-[#c5a059]/35 transition-all mb-10">
+        <div className="bg-[#0e0e12]/80 border border-white/10 rounded-2xl p-6 backdrop-blur-md shadow-2xl relative overflow-hidden group transition-all mb-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
             <div className="space-y-1">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">

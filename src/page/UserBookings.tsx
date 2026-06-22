@@ -256,9 +256,6 @@ export default function Bookings(): React.JSX.Element {
   // Custom dialog state handlers
   const [ticketModalBooking, setTicketModalBooking] = useState<Booking | null>(null);
   const [cancelTargetBooking, setCancelTargetBooking] = useState<Booking | null>(null);
-  const [reviewTargetBooking, setReviewTargetBooking] = useState<Booking | null>(null);
-  const [reviewRating, setReviewRating] = useState<number>(5);
-  const [reviewText, setReviewText] = useState<string>('');
   const [successToast, setSuccessToast] = useState<string>('');
 
   useEffect(() => {
@@ -339,52 +336,6 @@ export default function Bookings(): React.JSX.Element {
       alert(err.message || 'Failed to cancel booking. Please try again.');
     } finally {
       setCancelTargetBooking(null);
-    }
-  };
-
-  const handlePublishReview = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!reviewTargetBooking) return;
-
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    try {
-      const response = await fetch('http://localhost:5000/api/reviews', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          venueId: reviewTargetBooking.venueId,
-          bookingId: reviewTargetBooking.id,
-          rating: reviewRating,
-          reviewText: reviewText
-        })
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to publish review');
-      }
-
-      setBookings((prev) =>
-        prev.map((b) =>
-          b.id === reviewTargetBooking.id
-            ? { ...b, status: 'completed' }
-            : b
-        )
-      );
-
-      setSuccessToast(`Review published successfully for ${reviewTargetBooking.venueTitle}! Thank you for your feedback.`);
-    } catch (err: any) {
-      console.error('Review error:', err);
-      alert(err.message || 'Failed to publish review. Please try again.');
-    } finally {
-      setReviewTargetBooking(null);
-      setReviewRating(5);
-      setReviewText('');
     }
   };
 
@@ -484,7 +435,7 @@ export default function Bookings(): React.JSX.Element {
             My <span className="text-[#c5a059]">Bookings</span>
           </h1>
           <p className="mt-4 sm:mt-6 text-white/70 text-sm sm:text-base md:text-lg leading-relaxed max-w-xl mx-auto">
-            Manage your booked stays, examine payment plans, and review completed host experiences.
+            Manage your booked stays, examine payment plans, and keep track of completed host experiences.
           </p>
         </div>
 
@@ -593,22 +544,13 @@ export default function Bookings(): React.JSX.Element {
 
                       {/* Past reservation interactions */}
                       {isCompleted && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => setTicketModalBooking(booking)}
-                            className="px-5 py-2.5 text-xs font-semibold text-white/70 hover:text-white border border-white/10 hover:border-white/20 rounded-full transition-all"
-                          >
-                            Receipt
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setReviewTargetBooking(booking)}
-                            className="flex items-center gap-2 px-6 py-2.5 text-xs font-semibold tracking-wider bg-[#c5a059] text-black hover:bg-[#ebd5a7] rounded-full shadow-lg transition-all duration-300 active:scale-[0.98]"
-                          >
-                            <Star className="w-3.5 h-3.5" /> Write Review
-                          </button>
-                        </>
+                        <button
+                          type="button"
+                          onClick={() => setTicketModalBooking(booking)}
+                          className="px-5 py-2.5 text-xs font-semibold text-white/70 hover:text-white border border-white/10 hover:border-white/20 rounded-full transition-all"
+                        >
+                          Receipt
+                        </button>
                       )}
 
                       {/* Cancelled reservation option */}
@@ -777,102 +719,7 @@ export default function Bookings(): React.JSX.Element {
         </div>
       )}
 
-      {/* 3. Leave Venue Feedback Review Modal */}
-      {reviewTargetBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setReviewTargetBooking(null)} />
 
-          <div className="relative bg-[#0d0d11] border border-white/10 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#13131a]">
-              <div>
-                <span className="text-[10px] uppercase tracking-widest text-[#c5a059] font-mono">Feedback System</span>
-                <h4 className="text-lg font-semibold text-white mt-1">Review Your Experience</h4>
-              </div>
-              <button
-                type="button"
-                onClick={() => setReviewTargetBooking(null)}
-                className="text-white/40 hover:text-white transition-colors text-xl p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Review form */}
-            <form onSubmit={handlePublishReview}>
-              <div className="p-6 space-y-5">
-                <div className="text-center bg-white/5 p-4 rounded-2xl border border-white/5">
-                  <p className="text-xs text-white/50 mb-1">YOUR REVIEWED VENUE</p>
-                  <p className="font-semibold text-white text-base">{reviewTargetBooking.venueTitle}</p>
-                  <p className="text-[11px] text-[#c5a059] mt-0.5">{reviewTargetBooking.venueLocation}</p>
-                </div>
-
-                {/* Star rating selector */}
-                <div className="space-y-2">
-                  <label className="text-xs text-white/50 block font-medium">Over Rating Score</label>
-                  <div className="flex items-center justify-center gap-3 py-2">
-                    {[1, 2, 3, 4, 5].map((starValue) => {
-                      const isHighlighted = starValue <= reviewRating;
-                      return (
-                        <button
-                          key={starValue}
-                          type="button"
-                          onClick={() => setReviewRating(starValue)}
-                          className="p-1 focus:outline-none transform hover:scale-125 transition-transform"
-                        >
-                          <Star
-                            className={`w-8 h-8 transition-colors ${isHighlighted
-                              ? 'fill-[#c5a059] text-[#c5a059] drop-shadow-[0_0_6px_rgba(197,160,89,0.3)]'
-                              : 'text-white/20 hover:text-white/50'
-                              }`}
-                          />
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-center text-xs text-[#c5a059] font-semibold mt-1">
-                    {reviewRating === 5 && "Outstanding Experience"}
-                    {reviewRating === 4 && "Great, Loved It"}
-                    {reviewRating === 3 && "Average Experience"}
-                    {reviewRating === 2 && "Some Elements Needed Improvements"}
-                    {reviewRating === 1 && "Poor / Unsatisfactory"}
-                  </p>
-                </div>
-
-                {/* Review Text Area */}
-                <div className="space-y-1.5">
-                  <label className="text-xs text-white/50 block font-medium">Write feedback review details</label>
-                  <textarea
-                    required
-                    value={reviewText}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setReviewText(e.target.value)}
-                    placeholder="Tell us what you loved! Detail your review about hosting, decoration layout, amenities accuracy, and general security..."
-                    rows={4}
-                    className="w-full text-sm p-4 bg-[#0a0a0c] border border-white/10 rounded-2xl text-white placeholder-white/25 focus:outline-none focus:border-[#c5a059] transition-colors"
-                  />
-                </div>
-              </div>
-
-              {/* Action buttons */}
-              <div className="p-6 bg-[#13131a] border-t border-white/5 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setReviewTargetBooking(null)}
-                  className="flex-1 py-3 text-xs font-semibold tracking-wider text-center text-white bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/5"
-                >
-                  Discard
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-3 text-xs font-semibold tracking-wider text-center text-black bg-[#c5a059] hover:bg-[#ebd5a7] rounded-full transition-colors shadow-lg"
-                >
-                  Publish Review
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
     </section>
   );

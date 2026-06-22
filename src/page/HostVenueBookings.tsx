@@ -210,28 +210,6 @@ export default function HostVenueBookings() {
                     <span className="text-white text-sm font-bold truncate">{b.renterName || 'Offline Date Block'}</span>
                     <span className="text-sm font-bold text-[#c5a059] flex-shrink-0">₹{b.totalPrice}</span>
                   </div>
-                  
-                  <div className="space-y-1.5 text-white/60">
-                    {b.renterEmail && (
-                      <div className="flex items-center gap-1.5 overflow-hidden">
-                        <span className="text-white/40 font-semibold uppercase text-[9px] w-12 flex-shrink-0">Email:</span>
-                        <span className="truncate">{b.renterEmail}</span>
-                      </div>
-                    )}
-                    {b.renterPhone && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-white/40 font-semibold uppercase text-[9px] w-12 flex-shrink-0">Phone:</span>
-                        <span>{b.renterPhone}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-white/40 font-semibold uppercase text-[9px] w-12 flex-shrink-0">Guests:</span>
-                      <span>{b.guests} Guests</span>
-                    </div>
-                  </div>
-
-                  <hr className="border-white/5" />
-
                   <div className="text-white/40 text-[10px] font-mono leading-tight space-y-1">
                     <div>
                       <span className="text-white/30 mr-1 uppercase">Start:</span>
@@ -253,7 +231,7 @@ export default function HostVenueBookings() {
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center pt-1">
+                  <div className="flex justify-between items-center pt-1 pb-1">
                     <span className="font-mono text-[8px] text-white/30">ID: {b.id}</span>
                     <Badge className={cn(
                       "text-[9px] border capitalize",
@@ -264,6 +242,14 @@ export default function HostVenueBookings() {
                       {b.status}
                     </Badge>
                   </div>
+
+                  <Button
+                    onClick={() => navigate(`/bookings?bookingId=${b.id}`)}
+                    className="w-full mt-2 bg-white/5 hover:bg-[#c5a059] hover:text-black text-white rounded-xl text-[10px] font-semibold h-8 border border-white/10 transition-all flex items-center justify-center gap-1"
+                  >
+                    View Details
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
               ))}
               {activeBookings.length === 0 && (

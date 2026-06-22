@@ -22,6 +22,8 @@ export interface Venue {
   cleaningGap?: number;
   openingTime?: string;
   closingTime?: string;
+  status?: 'pending' | 'approved' | 'declined';
+  rejectionReason?: string;
 }
 
 export const sampleVenues: Venue[] = [

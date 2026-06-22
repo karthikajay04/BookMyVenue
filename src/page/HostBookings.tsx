@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calendar, MapPin, Users, CheckCircle2, Clock, XCircle, Info,
-  DollarSign, Mail, Phone, ChevronRight, User, AlertCircle, RefreshCw
+  DollarSign, Mail, Phone, ChevronRight, User, AlertCircle, RefreshCw, X
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ interface HostBooking {
   paymentStatus: string;
   renterName: string;
   renterEmail: string;
+  renterPhone?: string;
   hostName: string;
   hostMail: string;
   checkInInstructions: string;
@@ -48,6 +49,7 @@ const mockHostBookings: HostBooking[] = [
     paymentStatus: "paid",
     renterName: "Sarah Jenkins",
     renterEmail: "sarah.j@creativeagency.com",
+    renterPhone: "+1 (555) 019-2831",
     hostName: "Host Account",
     hostMail: "owner@bookmyvenue.com",
     checkInInstructions: "Gate code is #1209. Please meet coordinator Michael at the entrance. AV check starts at 10 AM."
@@ -67,6 +69,7 @@ const mockHostBookings: HostBooking[] = [
     paymentStatus: "paid",
     renterName: "David Miller",
     renterEmail: "d.miller@techcorps.org",
+    renterPhone: "+1 (555) 014-9988",
     hostName: "Host Account",
     hostMail: "owner@bookmyvenue.com",
     checkInInstructions: "Check-in instructions: Enter via main lobby valet desk. Secure entry code: #4550."
@@ -86,6 +89,7 @@ const mockHostBookings: HostBooking[] = [
     paymentStatus: "paid",
     renterName: "Elena Rostova",
     renterEmail: "elena@rostov.design",
+    renterPhone: "+1 (555) 017-4422",
     hostName: "Host Account",
     hostMail: "owner@bookmyvenue.com",
     checkInInstructions: "Completed stay. Guest left location in excellent condition."
@@ -105,6 +109,7 @@ const mockHostBookings: HostBooking[] = [
     paymentStatus: "refunded",
     renterName: "Robert Dow",
     renterEmail: "robert@dowassociates.com",
+    renterPhone: "+1 (555) 012-7733",
     hostName: "Host Account",
     hostMail: "owner@bookmyvenue.com",
     checkInInstructions: "Booking cancelled and refunded."
@@ -113,8 +118,19 @@ const mockHostBookings: HostBooking[] = [
 
 export default function HostBookings(): React.JSX.Element {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const bookingIdParam = searchParams.get('bookingId');
   const [bookings, setBookings] = useState<HostBooking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (bookings.length > 0 && bookingIdParam) {
+      const match = bookings.find(b => b.id === bookingIdParam);
+      if (match) {
+        setSelectedBooking(match);
+      }
+    }
+  }, [bookings, bookingIdParam]);
   const [activeFilter, setActiveFilter] = useState<'all' | 'upcoming' | 'completed' | 'offline' | 'cancelled'>('all');
 
   // Interactive detail overlay
@@ -181,18 +197,33 @@ export default function HostBookings(): React.JSX.Element {
       });
 
       if (response.ok) {
-        triggerToast(`Booking ${cancelBookingTarget.id} has been cancelled successfully.`, 'success');
+        triggerToast(
+          cancelBookingTarget.status === 'offline'
+            ? `Offline block ${cancelBookingTarget.id} has been unlocked successfully.`
+            : `Booking ${cancelBookingTarget.id} has been cancelled successfully.`,
+          'success'
+        );
       } else {
         // Mock fallback cancel action
         setBookings(prev => prev.map(b => b.id === cancelBookingTarget.id ? { ...b, status: 'cancelled', paymentStatus: 'refunded' } : b));
-        triggerToast(`Booking ${cancelBookingTarget.id} updated locally to cancelled.`, 'success');
+        triggerToast(
+          cancelBookingTarget.status === 'offline'
+            ? `Offline block ${cancelBookingTarget.id} updated locally to unlocked.`
+            : `Booking ${cancelBookingTarget.id} updated locally to cancelled.`,
+          'success'
+        );
       }
       setCancelBookingTarget(null);
       fetchBookings();
     } catch (err) {
       console.error('Failed cancelling booking:', err);
       setBookings(prev => prev.map(b => b.id === cancelBookingTarget.id ? { ...b, status: 'cancelled', paymentStatus: 'refunded' } : b));
-      triggerToast(`Booking ${cancelBookingTarget.id} updated locally to cancelled.`, 'success');
+      triggerToast(
+        cancelBookingTarget.status === 'offline'
+          ? `Offline block ${cancelBookingTarget.id} updated locally to unlocked.`
+          : `Booking ${cancelBookingTarget.id} updated locally to cancelled.`,
+        'success'
+      );
       setCancelBookingTarget(null);
       fetchBookings();
     }
@@ -352,7 +383,7 @@ export default function HostBookings(): React.JSX.Element {
                 <div
                   key={booking.id}
                   className={cn(
-                    "bg-[#0e0e12]/80 border hover:border-[#c5a059]/35 rounded-3xl p-6 flex flex-col md:flex-row gap-6 items-center justify-between transition-all duration-300 shadow-xl backdrop-blur-md group",
+                    "bg-[#0e0e12]/80 border rounded-3xl p-6 flex flex-col md:flex-row gap-6 items-center justify-between transition-all duration-300 shadow-xl backdrop-blur-md group",
                     isCancelled ? "border-white/5 opacity-70" : "border-white/10"
                   )}
                 >
@@ -364,28 +395,7 @@ export default function HostBookings(): React.JSX.Element {
                         alt={booking.venueTitle}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-102"
                       />
-                      <div className="absolute top-2 left-2">
-                        {isUpcoming && (
-                          <Badge className="bg-emerald-500 text-black border-none text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full">
-                            Upcoming
-                          </Badge>
-                        )}
-                        {isCompleted && (
-                          <Badge className="bg-white/20 text-white border-none text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full">
-                            Completed
-                          </Badge>
-                        )}
-                        {isCancelled && (
-                          <Badge className="bg-red-500 text-white border-none text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full">
-                            Cancelled
-                          </Badge>
-                        )}
-                        {booking.status === 'offline' && (
-                          <Badge className="bg-amber-500 text-black border-none text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full">
-                            Offline Lock
-                          </Badge>
-                        )}
-                      </div>
+
                     </div>
 
                     <div className="text-center sm:text-left space-y-2 min-w-0 flex-1">
@@ -447,11 +457,11 @@ export default function HostBookings(): React.JSX.Element {
                         <ChevronRight className="w-3 h-3 text-white/60" />
                       </Button>
 
-                      {(isUpcoming || booking.status === 'offline') && (
+                      {booking.status === 'offline' && (
                         <Button
                           onClick={() => setCancelBookingTarget(booking)}
                           className="bg-white/5 hover:bg-red-950/25 text-red-400 hover:text-red-300 rounded-full w-9 h-9 p-0 border border-white/10 hover:border-red-500/20 transition-colors flex items-center justify-center"
-                          title={booking.status === 'offline' ? "Unlock Dates" : "Cancel Stay"}
+                          title="Unlock Dates"
                         >
                           <XCircle className="w-4 h-4" />
                         </Button>
@@ -481,10 +491,10 @@ export default function HostBookings(): React.JSX.Element {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative bg-[#0d0d11] border border-white/10 w-full max-w-lg rounded-3xl shadow-2xl z-10 flex flex-col overflow-hidden text-left"
+              className="relative bg-[#0d0d11] border border-white/10 w-full max-w-lg rounded-3xl shadow-2xl z-10 flex flex-col max-h-[90vh] overflow-hidden text-left"
             >
               {/* Modal Header */}
-              <div className="p-6 border-b border-white/5 flex items-center justify-between bg-[#13131a]">
+              <div className="p-6 border-b border-white/5 flex items-center justify-between bg-[#13131a] shrink-0">
                 <div>
                   <span className="text-[9px] uppercase tracking-widest text-[#c5a059] font-mono font-bold">Lease Receipt</span>
                   <h4 className="text-lg font-bold text-white mt-1">{selectedBooking.venueTitle}</h4>
@@ -498,7 +508,7 @@ export default function HostBookings(): React.JSX.Element {
               </div>
 
               {/* Modal Body */}
-              <div className="p-6 space-y-6">
+              <div className="p-6 space-y-6 overflow-y-auto flex-1 scrollbar-thin">
 
                 {/* Visual info card */}
                 <div className="bg-[#13131a] border border-white/5 p-4 rounded-2xl flex items-center gap-4">
@@ -555,16 +565,25 @@ export default function HostBookings(): React.JSX.Element {
                 {/* Renter Contact details */}
                 <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 space-y-3">
                   <p className="text-[10px] text-[#c5a059] uppercase tracking-widest font-bold">Renter Contact Details</p>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-[#c5a059] flex items-center justify-center text-black font-bold text-xs uppercase">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#c5a059] flex items-center justify-center text-black font-bold text-sm uppercase flex-shrink-0">
                       {(selectedBooking.renterName || 'O').charAt(0)}
                     </div>
-                    <div>
-                      <h6 className="font-semibold text-white text-xs">{selectedBooking.renterName || 'Offline Date Block'}</h6>
+                    <div className="space-y-1 min-w-0">
+                      <h6 className="font-semibold text-white text-sm truncate">{selectedBooking.renterName || 'Offline Date Block'}</h6>
                       {selectedBooking.renterEmail ? (
-                        <a href={`mailto:${selectedBooking.renterEmail}`} className="text-[11px] text-white/50 hover:underline">{selectedBooking.renterEmail}</a>
+                        <div className="flex items-center gap-1.5 text-xs text-white/60">
+                          <Mail className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
+                          <a href={`mailto:${selectedBooking.renterEmail}`} className="hover:underline truncate">{selectedBooking.renterEmail}</a>
+                        </div>
                       ) : (
-                        <span className="text-[11px] text-white/30">N/A (Offline Block)</span>
+                        <span className="text-[11px] text-white/30 block">N/A (Offline Block)</span>
+                      )}
+                      {selectedBooking.renterPhone && (
+                        <div className="flex items-center gap-1.5 text-xs text-white/60">
+                          <Phone className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
+                          <a href={`tel:${selectedBooking.renterPhone}`} className="hover:underline truncate">{selectedBooking.renterPhone}</a>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -581,14 +600,7 @@ export default function HostBookings(): React.JSX.Element {
               </div>
 
               {/* Modal footer */}
-              <div className="p-6 bg-[#13131a] border-t border-white/5 flex gap-3">
-                <a
-                  href={`mailto:${selectedBooking.renterEmail}?subject=Regarding your booking ${selectedBooking.id} at ${selectedBooking.venueTitle}`}
-                  className="flex-1 py-2.5 text-xs font-semibold text-center text-white bg-white/5 hover:bg-white/10 rounded-full border border-white/15 transition-all flex items-center justify-center gap-1.5"
-                >
-                  <Mail className="w-3.5 h-3.5" />
-                  Email Renter
-                </a>
+              <div className="p-6 bg-[#13131a] border-t border-white/5 flex gap-3 shrink-0">
                 <Button
                   onClick={() => setSelectedBooking(null)}
                   className="flex-1 bg-[#c5a059] hover:bg-[#b08e4d] text-black font-semibold rounded-full h-10 transition-all text-xs"
@@ -624,21 +636,13 @@ export default function HostBookings(): React.JSX.Element {
               </div>
               <div className="space-y-2">
                 <h3 className="text-lg font-bold text-white">
-                  {cancelBookingTarget.status === 'offline' ? 'Unlock Venue Dates?' : 'Cancel Guest Reservation?'}
+                  Unlock Venue Dates?
                 </h3>
                 <p className="text-xs text-white/50 leading-relaxed font-light">
-                  {cancelBookingTarget.status === 'offline' ? (
-                    <>Are you sure you want to unlock the offline date block at <strong className="text-white">{cancelBookingTarget.venueTitle}</strong>?</>
-                  ) : (
-                    <>Are you sure you want to cancel the reservation for <strong className="text-white">{cancelBookingTarget.renterName}</strong> at {cancelBookingTarget.venueTitle}?</>
-                  )}
+                  Are you sure you want to unlock the offline date block at <strong className="text-white">{cancelBookingTarget.venueTitle}</strong>?
                 </p>
                 <p className="text-[10px] text-red-400/80 bg-red-950/10 border border-red-500/10 p-2.5 rounded-lg font-light leading-normal">
-                  {cancelBookingTarget.status === 'offline' ? (
-                    <>This action is permanent and will unlock the dates on your calendar, allowing new online rentals.</>
-                  ) : (
-                    <>The deposit amount of <strong>₹{cancelBookingTarget.totalPrice.toLocaleString()}</strong> will be refunded to the client. This action is permanent and frees up calendar dates.</>
-                  )}
+                  This action is permanent and will unlock the dates on your calendar, allowing new online rentals.
                 </p>
               </div>
               <div className="flex gap-3 pt-2">
@@ -646,13 +650,13 @@ export default function HostBookings(): React.JSX.Element {
                   onClick={() => setCancelBookingTarget(null)}
                   className="flex-1 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-full h-11 text-xs"
                 >
-                  {cancelBookingTarget.status === 'offline' ? 'Keep Blocked' : 'Keep Booking'}
+                  Keep Blocked
                 </Button>
                 <Button
                   onClick={handleConfirmCancel}
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-full h-11 text-xs"
                 >
-                  {cancelBookingTarget.status === 'offline' ? 'Unlock Dates' : 'Cancel Booking'}
+                  Unlock Dates
                 </Button>
               </div>
             </motion.div>

@@ -1,12 +1,15 @@
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import { query } from "../db.js";
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { query } from '../db.js';
 
-// Generate secure JWT Token based on email
+// Generate secure JWT Token based on email and role
 const generateToken = (email, role) => {
-  return jwt.sign({ email, role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign(
+    { email, role },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' }
+  );
 };
-
 
 /**
  * @desc    Register a new user
@@ -15,47 +18,35 @@ const generateToken = (email, role) => {
  */
 export const registerUser = async (req, res) => {
   const { name, email, password, role } = req.body;
-  const userRole =role === "venue_owner" ? "venue_owner" : "user";
 
   try {
     // 1. Basic validation
     if (!name || !email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Please provide name, email, and password" });
+      return res.status(400).json({ message: 'Please provide name, email, and password' });
     }
 
     if (password.length < 6) {
-      return res
-        .status(400)
-        .json({ message: "Password must be at least 6 characters long" });
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' });
     }
 
     // 2. Check if user already exists
-    const emailCheckResult = await query(
-      "SELECT * FROM users WHERE email = $1",
-      [email.toLowerCase().trim()],
-    );
+    const emailCheckResult = await query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
     if (emailCheckResult.rows.length > 0) {
-      return res
-        .status(400)
-        .json({ message: "A user with this email address already exists" });
+      return res.status(400).json({ message: 'A user with this email address already exists' });
     }
 
     // 3. Secure password hashing
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(15);
     const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Validate and restrict role to prevent unauthorized admin creations
+    const userRole = (role === 'venue_owner' || role === 'user') ? role : 'user';
 
     // 4. Insert new user into database
     const insertResult = await query(
-  "INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING name, email, role",
-  [
-    name.trim(),
-    email.toLowerCase().trim(),
-    hashedPassword,
-    userRole,
-  ]
-);
+      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING name, email, role',
+      [name.trim(), email.toLowerCase().trim(), hashedPassword, userRole]
+    );
 
     const newUser = insertResult.rows[0];
 
@@ -67,15 +58,13 @@ export const registerUser = async (req, res) => {
       user: {
         name: newUser.name,
         email: newUser.email,
-        role: newUser.role,
+        role: newUser.role
       },
-      token,
+      token
     });
   } catch (error) {
-    console.error("Error during registration:", error);
-    res.status(500).json({
-      message: "Server error during user registration. Please try again.",
-    });
+    console.error('Error during registration:', error);
+    res.status(500).json({ message: 'Server error during user registration. Please try again.' });
   }
 };
 
@@ -90,17 +79,13 @@ export const loginUser = async (req, res) => {
   try {
     // 1. Validation
     if (!email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Please provide email and password" });
+      return res.status(400).json({ message: 'Please provide email and password' });
     }
 
     // 2. Search for user by email
-    const userResult = await query("SELECT * FROM users WHERE email = $1", [
-      email.toLowerCase().trim(),
-    ]);
+    const userResult = await query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
     if (userResult.rows.length === 0) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     const user = userResult.rows[0];
@@ -108,7 +93,7 @@ export const loginUser = async (req, res) => {
     // 3. Verify bcrypt-hashed password
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     // 4. Generate JWT
@@ -119,14 +104,12 @@ export const loginUser = async (req, res) => {
       user: {
         name: user.name,
         email: user.email,
-        role: user.role,
+        role: user.role
       },
-      token,
+      token
     });
   } catch (error) {
-    console.error("Error during login:", error);
-    res
-      .status(500)
-      .json({ message: "Server error during login. Please try again." });
+    console.error('Error during login:', error);
+    res.status(500).json({ message: 'Server error during login. Please try again.' });
   }
 };

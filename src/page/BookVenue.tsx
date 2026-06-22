@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 export default function BookVenue() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const [bookingStep, setBookingStep] = useState<'date-selection' | 'payment' | 'success'>('date-selection');
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
@@ -82,7 +82,7 @@ export default function BookVenue() {
         setIsLoadingVenue(false);
       }
     };
-    
+
     if (id) {
       fetchVenue();
     }
@@ -167,14 +167,14 @@ export default function BookVenue() {
     const slots = [];
     const startMin = parseTimeStr(venue.openingTime || '08:00');
     const endMin = parseTimeStr(venue.closingTime || '22:00');
-    
+
     // Generate every hour
     for (let min = startMin; min + 60 <= endMin; min += 60) {
       const sh = Math.floor(min / 60);
       const sm = min % 60;
       const eh = Math.floor((min + 60) / 60);
       const em = (min + 60) % 60;
-      
+
       const startStr = `${String(sh).padStart(2, '0')}:${String(sm).padStart(2, '0')}`;
       const endStr = `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`;
       slots.push({ start: startStr, end: endStr });
@@ -186,8 +186,8 @@ export default function BookVenue() {
     const options = [];
     const startMin = parseTimeStr(venue.openingTime || '08:00');
     const endMin = parseTimeStr(venue.closingTime || '22:00');
-    
-    for (let min = startMin; min <= endMin; min += 30) {
+
+    for (let min = startMin; min <= endMin; min += 60) {
       const h = Math.floor(min / 60);
       const m = min % 60;
       options.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
@@ -201,7 +201,7 @@ export default function BookVenue() {
     const eMinutes = parseTimeStr(endHour);
     const slotSMin = parseTimeStr(slotStartStr);
     const slotEMin = parseTimeStr(slotEndStr);
-    
+
     return slotSMin >= sMinutes && slotEMin <= eMinutes;
   };
 
@@ -225,13 +225,13 @@ export default function BookVenue() {
     if (!selectedDate) return 'available';
     const slotStart = new Date(combineDateAndHour(selectedDate, hStart));
     const slotEnd = new Date(combineDateAndHour(selectedDate, hEnd));
-    
+
     for (const b of bookedSlots) {
       const bStart = new Date(b.startDate);
       const bEnd = new Date(b.endDate);
       const gapHours = Number(venue?.cleaningGap || 0);
       const bCleaningEnd = new Date(bEnd.getTime() + gapHours * 60 * 60 * 1000);
-      
+
       if (slotStart < bEnd && bStart < slotEnd) {
         return 'booked';
       }
@@ -247,27 +247,27 @@ export default function BookVenue() {
     if (!selectedDate || !startHour || !endHour) return '';
     const start = new Date(combineDateAndHour(selectedDate, startHour));
     const end = new Date(combineDateAndHour(selectedDate, endHour));
-    
+
     if (end <= start) {
       return 'End time must be after start time.';
     }
-    
+
     // Check overlap
     const hasOverlap = bookedSlots.some(b => {
       const bStart = new Date(b.startDate);
       const bEnd = new Date(b.endDate);
-      
+
       const gapHours = Number(venue.cleaningGap || 0);
       const limitNewEnd = new Date(end.getTime() + gapHours * 60 * 60 * 1000);
       const limitExistingEnd = new Date(bEnd.getTime() + gapHours * 60 * 60 * 1000);
-      
+
       return start < limitExistingEnd && bStart < limitNewEnd;
     });
-    
+
     if (hasOverlap) {
       return 'The selected time range conflicts with an existing booking or its cleaning gap.';
     }
-    
+
     return '';
   };
 
@@ -311,10 +311,10 @@ export default function BookVenue() {
     if (!s || !e) return 0;
     const [sh, sm] = s.split(':').map(Number);
     const [eh, em] = e.split(':').map(Number);
-    const diff = (eh + em/60) - (sh + sm/60);
+    const diff = (eh + em / 60) - (sh + sm / 60);
     return diff > 0 ? diff : 0;
   };
-  
+
   const getDurationInDays = (s: string, e: string) => {
     if (!s || !e) return 0;
     const sDate = new Date(s);
@@ -329,8 +329,8 @@ export default function BookVenue() {
   const serviceFee = Math.round(basePrice * 0.15);
   const totalPrice = basePrice + serviceFee;
 
-  const isDatesSelected = isHours 
-    ? (selectedDate && startHour && endHour && !hourBookingError) 
+  const isDatesSelected = isHours
+    ? (selectedDate && startHour && endHour && !hourBookingError)
     : (checkIn && checkOut && !bookingDatesError);
 
   const handleAuthorizePayment = async () => {
@@ -399,7 +399,7 @@ export default function BookVenue() {
       <div className="absolute bottom-0 left-0 right-0 h-80 bg-gradient-to-t from-[#0a0a0c]/95 via-[#0a0a0c]/30 to-transparent pointer-events-none z-10" />
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 pt-32 sm:pt-40">
-        
+
         {/* Back Link */}
         <button
           onClick={() => {
@@ -426,10 +426,10 @@ export default function BookVenue() {
 
         {/* Main Grid: checkout on left, sticky summary on right */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-          
+
           {/* Left Column: Multi-Step Booking Wizard */}
           <div className="lg:col-span-8 space-y-6">
-            
+
             {/* Steps indicator */}
             <div className="flex items-center gap-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
               <div className="flex items-center gap-2">
@@ -475,7 +475,7 @@ export default function BookVenue() {
                 >
                   <div className="space-y-1">
                     <h2 className="text-xl font-semibold flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-[#c5a059]" /> {isHours ? 'Select Date & Hours' : 'Select Booking Dates'}
+                      {isHours ? 'Select Date & Hours' : 'Select Booking Dates'}
                     </h2>
                     <p className="text-sm text-white/50">Configure your execution window for this venue.</p>
                   </div>
@@ -485,7 +485,7 @@ export default function BookVenue() {
                   {isHours ? (
                     <div className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        
+
                         {/* Interactive Calendar Preview */}
                         <div className="bg-[#0e0e12]/60 border border-white/5 p-5 rounded-2xl space-y-4">
                           <div className="flex justify-between items-center">
@@ -512,7 +512,7 @@ export default function BookVenue() {
                               const calYear = new Date().getFullYear();
                               const calMonth = new Date().getMonth();
                               const checkDateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                              
+
                               const dayBookings = bookedSlots.filter(b => b.startDate.split('T')[0] === checkDateStr);
                               let status = 'available';
                               if (dayBookings.length > 0) {
@@ -538,10 +538,10 @@ export default function BookVenue() {
                                     isSelected
                                       ? "bg-[#c5a059] text-black font-bold scale-105"
                                       : status === 'available'
-                                      ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-medium hover:bg-emerald-500/20"
-                                      : status === 'partial'
-                                      ? "bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25"
-                                      : "bg-zinc-800 text-white/20 border-white/5 cursor-not-allowed"
+                                        ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-medium hover:bg-emerald-500/20"
+                                        : status === 'partial'
+                                          ? "bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25"
+                                          : "bg-zinc-800 text-white/20 border-white/5 cursor-not-allowed"
                                   )}
                                 >
                                   <span>{day}</span>
@@ -558,8 +558,8 @@ export default function BookVenue() {
                         <div className="space-y-4">
                           <div className="space-y-1.5">
                             <label className="text-xs font-semibold text-white/60 uppercase block">Selected Date</label>
-                            <input 
-                              type="date" 
+                            <input
+                              type="date"
                               value={selectedDate}
                               min={todayStr}
                               max={maxDateStr}
@@ -575,7 +575,7 @@ export default function BookVenue() {
                                 <span>Gap: {venue.cleaningGap} hr{venue.cleaningGap !== 1 && 's'}</span>
                               </div>
 
-                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                                 {generateTimelineHours().map((slot, idx) => {
                                   const status = getSlotStatus(slot.start, slot.end);
                                   const isSelected = isSlotWithinSelectedRange(slot.start, slot.end);
@@ -590,10 +590,10 @@ export default function BookVenue() {
                                         isSelected
                                           ? "bg-[#c5a059] text-black border-[#c5a059] font-bold"
                                           : status === 'booked'
-                                          ? "bg-zinc-800 text-white/20 border-white/5 cursor-not-allowed"
-                                          : status === 'cleaning'
-                                          ? "bg-amber-500/10 text-amber-400/50 border-amber-500/20 cursor-not-allowed"
-                                          : "bg-emerald-500/5 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/15"
+                                            ? "bg-zinc-800 text-white/20 border-white/5 cursor-not-allowed"
+                                            : status === 'cleaning'
+                                              ? "bg-amber-500/10 text-amber-400/50 border-amber-500/20 cursor-not-allowed"
+                                              : "bg-emerald-500/5 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/15"
                                       )}
                                     >
                                       <span className="font-medium">{formatTime12h(slot.start)}</span>
@@ -646,8 +646,8 @@ export default function BookVenue() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-1.5">
                         <label className="text-xs font-semibold text-white/60 uppercase tracking-wider block">Check-In Date</label>
-                        <input 
-                          type="date" 
+                        <input
+                          type="date"
                           value={checkIn}
                           min={todayStr}
                           max={maxDateStr}
@@ -655,11 +655,11 @@ export default function BookVenue() {
                           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
                         />
                       </div>
-             
+
                       <div className="space-y-1.5">
                         <label className="text-xs font-semibold text-white/60 uppercase tracking-wider block">Check-Out Date</label>
-                        <input 
-                          type="date" 
+                        <input
+                          type="date"
                           value={checkOut}
                           min={checkIn || todayStr}
                           max={maxDateStr}
@@ -675,14 +675,14 @@ export default function BookVenue() {
                       )}
                     </div>
                   )}
-             
+
                   <div className="bg-[#c5a059]/5 border border-[#c5a059]/10 text-white/70 text-xs rounded-xl p-3.5 flex items-start gap-2.5 leading-relaxed">
                     <Info className="w-4 h-4 text-[#c5a059] flex-shrink-0 mt-0.5" />
                     <span>
                       <strong>Booking Window Limit:</strong> Stays are only bookable online up to 30 days in advance (up to {maxDate.toLocaleDateString()}). For dates further out, contact support.
                     </span>
                   </div>
-             
+
                   <div className="flex justify-end pt-4">
                     <Button
                       disabled={!isDatesSelected}
@@ -715,15 +715,15 @@ export default function BookVenue() {
                   <hr className="border-white/5" />
 
                   <div className="space-y-4">
-                    
+
                     {/* Contact Details */}
                     <div>
                       <h4 className="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-3">Renter Contact Details</h4>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-1">
                           <label className="text-[10px] text-white/50 uppercase">Full Name *</label>
-                          <input 
-                            type="text" 
+                          <input
+                            type="text"
                             value={renterName}
                             onChange={(e) => setRenterName(e.target.value)}
                             placeholder="John Doe"
@@ -732,8 +732,8 @@ export default function BookVenue() {
                         </div>
                         <div className="space-y-1">
                           <label className="text-[10px] text-white/50 uppercase">Phone Number *</label>
-                          <input 
-                            type="tel" 
+                          <input
+                            type="tel"
                             value={renterPhone}
                             onChange={(e) => setRenterPhone(e.target.value)}
                             placeholder="+1 (555) 019-9231"
@@ -742,8 +742,8 @@ export default function BookVenue() {
                         </div>
                         <div className="space-y-1">
                           <label className="text-[10px] text-white/50 uppercase">Email Address *</label>
-                          <input 
-                            type="email" 
+                          <input
+                            type="email"
                             value={renterEmail}
                             onChange={(e) => setRenterEmail(e.target.value)}
                             placeholder="johndoe@example.com"
@@ -758,14 +758,14 @@ export default function BookVenue() {
                     {/* Mock UPI QR Scan Section */}
                     <div>
                       <h4 className="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-4">UPI Scan to Pay (Mockup Guarantee)</h4>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 bg-black/35 border border-white/5 p-6 rounded-2xl">
-                        
+
                         {/* QR Display */}
                         <div className="md:col-span-4 flex flex-col items-center justify-center bg-white p-3 rounded-2xl shadow-xl w-40 h-40 mx-auto border border-white/20">
-                          <img 
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&bgcolor=ffffff&data=${encodeURIComponent(`upi://pay?pa=pay@bookmyvenue.com&pn=BookMyVenue&am=${totalPrice}&cu=INR`)}`} 
-                            alt="Payment QR Code Mock" 
+                          <img
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&bgcolor=ffffff&data=${encodeURIComponent(`upi://pay?pa=pay@bookmyvenue.com&pn=BookMyVenue&am=${totalPrice}&cu=INR`)}`}
+                            alt="Payment QR Code Mock"
                             className="w-full h-full object-contain"
                           />
                         </div>
@@ -801,15 +801,15 @@ export default function BookVenue() {
 
                     {/* Transaction Reference & Receipt Drop Zone */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      
+
                       {/* UPI Reference Number Input */}
                       <div className="space-y-1.5">
                         <label className="text-[10px] text-white/55 uppercase block flex justify-between">
                           <span>UPI Transaction Ref Number *</span>
                           <span className="text-white/30 lowercase">12-digit code</span>
                         </label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           maxLength={12}
                           value={transactionId}
                           onChange={(e) => {
@@ -827,11 +827,11 @@ export default function BookVenue() {
                       {/* Mock Screenshot Uploader */}
                       <div className="space-y-1.5">
                         <label className="text-[10px] text-white/50 uppercase block">Upload Receipt Screenshot *</label>
-                        <div 
+                        <div
                           className={cn(
                             "border-2 border-dashed rounded-xl p-3 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[78px]",
-                            receiptFileName 
-                              ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400" 
+                            receiptFileName
+                              ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400"
                               : "border-white/10 bg-white/5 text-white/40 hover:border-[#c5a059]/30"
                           )}
                           onClick={() => {
@@ -913,7 +913,7 @@ export default function BookVenue() {
                   <p className="text-xs text-white/70 leading-relaxed font-light max-w-sm">
                     The host reviews all inquiries within 12 hours. A confirmation email and direct receipt invoice will be sent to you at <span className="font-semibold text-white underline">{renterEmail}</span>.
                   </p>
-                  
+
                   <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md pt-4">
                     <Link to="/mybooking" className="flex-1">
                       <Button className="w-full bg-[#c5a059] hover:bg-[#b08e4d] text-black font-semibold rounded-xl h-11 text-xs">
@@ -934,14 +934,14 @@ export default function BookVenue() {
 
           {/* Right Column: Sticky Summary Panel */}
           <div className="lg:col-span-4 lg:sticky lg:top-28 space-y-6">
-            
+
             {/* Premium Venue Detail Box */}
             <div className="bg-[#0e0e12]/90 border border-white/10 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-md">
               <div className="h-44 relative">
-                <img 
-                  src={venue.images[0]} 
-                  alt={venue.title} 
-                  className="w-full h-full object-cover" 
+                <img
+                  src={venue.images[0]}
+                  alt={venue.title}
+                  className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e12] to-transparent" />
                 <Badge className="absolute top-4 right-4 bg-[#c5a059] text-black border-none font-bold hover:bg-[#c5a059]">

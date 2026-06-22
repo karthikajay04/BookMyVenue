@@ -17,7 +17,7 @@ export default function VenueDetail() {
   const navigate = useNavigate();
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  
+
   const [venue, setVenue] = useState<Venue | null>(null);
   const [isLoadingVenue, setIsLoadingVenue] = useState(true);
 
@@ -67,14 +67,14 @@ export default function VenueDetail() {
     const slots = [];
     const startMin = parseTimeStr(venue.openingTime || '08:00');
     const endMin = parseTimeStr(venue.closingTime || '22:00');
-    
+
     // Generate every hour
     for (let min = startMin; min + 60 <= endMin; min += 60) {
       const sh = Math.floor(min / 60);
       const sm = min % 60;
       const eh = Math.floor((min + 60) / 60);
       const em = (min + 60) % 60;
-      
+
       const startStr = `${String(sh).padStart(2, '0')}:${String(sm).padStart(2, '0')}`;
       const endStr = `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`;
       slots.push({ start: startStr, end: endStr });
@@ -87,7 +87,7 @@ export default function VenueDetail() {
     const options = [];
     const startMin = parseTimeStr(venue.openingTime || '08:00');
     const endMin = parseTimeStr(venue.closingTime || '22:00');
-    
+
     for (let min = startMin; min <= endMin; min += 30) {
       const h = Math.floor(min / 60);
       const m = min % 60;
@@ -102,7 +102,7 @@ export default function VenueDetail() {
     const eMinutes = parseTimeStr(endHour);
     const slotSMin = parseTimeStr(slotStartStr);
     const slotEMin = parseTimeStr(slotEndStr);
-    
+
     return slotSMin >= sMinutes && slotEMin <= eMinutes;
   };
 
@@ -126,13 +126,13 @@ export default function VenueDetail() {
     if (!selectedDate) return 'available';
     const slotStart = new Date(combineDateAndHour(selectedDate, hStart));
     const slotEnd = new Date(combineDateAndHour(selectedDate, hEnd));
-    
+
     for (const b of bookedSlots) {
       const bStart = new Date(b.startDate);
       const bEnd = new Date(b.endDate);
       const gapHours = Number(venue?.cleaningGap || 0);
       const bCleaningEnd = new Date(bEnd.getTime() + gapHours * 60 * 60 * 1000);
-      
+
       if (slotStart < bEnd && bStart < slotEnd) {
         return 'booked';
       }
@@ -186,7 +186,7 @@ export default function VenueDetail() {
         setIsLoadingVenue(false);
       }
     };
-    
+
     if (id) {
       fetchVenue();
     }
@@ -229,7 +229,7 @@ export default function VenueDetail() {
   }
 
   const isHours = venue.bookingType === 'hours';
-  
+
   const handleBook = () => {
     const token = localStorage.getItem('token');
     const user = localStorage.getItem('user');
@@ -341,21 +341,21 @@ export default function VenueDetail() {
               {/* Section 1: Overview */}
               <div className="space-y-4">
                 <h3 className="text-sm font-bold text-[#c5a059] uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-white/5">
-                  <Info className="w-4 h-4" /> Overview
+                  Overview
                 </h3>
 
                 {/* Inline specifications row */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pb-4 border-b border-white/5 text-sm text-white/70">
                   <div className="flex items-center gap-2 bg-white/[0.01] border border-white/5 p-3 rounded-2xl">
-                    <Users className="w-4 h-4 text-[#c5a059]" />
+
                     <span><strong>Max Capacity:</strong> {venue.capacity} Guests</span>
                   </div>
                   <div className="flex items-center gap-2 bg-white/[0.01] border border-white/5 p-3 rounded-2xl">
-                    <Maximize2 className="w-4 h-4 text-[#c5a059]" />
+
                     <span><strong>Space Area:</strong> {venue.squareFeet.toLocaleString()} sq ft</span>
                   </div>
                   <div className="flex items-center gap-2 bg-white/[0.01] border border-white/5 p-3 rounded-2xl">
-                    <MapPin className="w-4 h-4 text-[#c5a059]" />
+
                     <span><strong>Location:</strong> {venue.location}</span>
                   </div>
                 </div>
@@ -381,7 +381,7 @@ export default function VenueDetail() {
               {/* Section 2: Amenities */}
               <div className="space-y-4 pt-4">
                 <h3 className="text-sm font-bold text-[#c5a059] uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-white/5">
-                  <Sparkles className="w-4 h-4" /> Amenities
+                  Amenities
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
                   {venue.amenities.map((amenity) => (
@@ -398,7 +398,7 @@ export default function VenueDetail() {
               {/* Section 3: Location & Parking */}
               <div className="space-y-6 pt-4">
                 <h3 className="text-sm font-bold text-[#c5a059] uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-white/5">
-                  <MapPin className="w-4 h-4" /> Location & Parking
+                  Location & Parking
                 </h3>
 
                 <div className="space-y-4 pt-1">
@@ -411,7 +411,7 @@ export default function VenueDetail() {
 
                   <div>
                     <h4 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                      <Car className="w-4 h-4 text-[#c5a059]" /> Parking Accommodations
+                      Parking Accommodations
                     </h4>
                     <p className="text-sm text-white/70 leading-relaxed bg-white/[0.02] border border-white/5 rounded-2xl p-4 font-light">
                       {venue.parking}
@@ -423,13 +423,13 @@ export default function VenueDetail() {
               {/* Section 4: Catering & Rules */}
               <div className="space-y-6 pt-4">
                 <h3 className="text-sm font-bold text-[#c5a059] uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-white/5">
-                  <ShieldAlert className="w-4 h-4" /> Policies & Guidelines
+                  Policies & Guidelines
                 </h3>
 
                 <div className="space-y-4 pt-1">
                   <div>
                     <h4 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                      <Utensils className="w-4 h-4 text-[#c5a059]" /> Food & Catering Policy
+                      Food & Catering Policy
                     </h4>
                     <p className="text-sm text-white/80 leading-relaxed bg-white/[0.02] border border-white/5 rounded-2xl p-4 font-light">
                       {venue.catering}
@@ -453,9 +453,9 @@ export default function VenueDetail() {
               {/* Section 5: Availability & Calendar */}
               <div className="space-y-6 pt-4">
                 <h3 className="text-sm font-bold text-[#c5a059] uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-white/5">
-                  <Calendar className="w-4 h-4" /> Availability & Booked Dates
+                  Availability & Booked Dates
                 </h3>
- 
+
                 <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-6 space-y-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -466,7 +466,7 @@ export default function VenueDetail() {
                         Official active booking calendar schedules for {venue.title}
                       </p>
                     </div>
- 
+
                     {/* Calendar Legend */}
                     <div className="flex items-center gap-4 text-xs">
                       <div className="flex items-center gap-2">
@@ -479,21 +479,21 @@ export default function VenueDetail() {
                       </div>
                     </div>
                   </div>
- 
+
                   {/* Calendar Grid */}
                   <div className="max-w-md mx-auto">
                     {/* Days of Week Header */}
                     <div className="grid grid-cols-7 gap-2 text-center text-xs font-bold text-white/40 mb-3 uppercase tracking-wider">
                       <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
                     </div>
- 
+
                     {/* Days Grid */}
                     <div className="grid grid-cols-7 gap-2">
                       {/* Empty slots for month start offset */}
                       {Array.from({ length: new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay() }).map((_, idx) => (
                         <div key={`empty-${idx}`} className="aspect-square" />
                       ))}
- 
+
                       {/* Days list */}
                       {Array.from({ length: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() }).map((_, idx) => {
                         const day = idx + 1;
@@ -501,7 +501,7 @@ export default function VenueDetail() {
                         const calMonth = new Date().getMonth();
                         const checkDateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                         const checkDate = new Date(`${checkDateStr}T00:00:00`);
-                        
+
                         let status = 'available';
                         if (venue.bookingType === 'hours') {
                           const dayBookings = bookedSlots.filter(b => b.startDate.split('T')[0] === checkDateStr);
@@ -527,7 +527,7 @@ export default function VenueDetail() {
                           });
                           status = hasBooking ? 'booked' : 'available';
                         }
- 
+
                         return (
                           <div
                             key={`day-${day}`}
@@ -541,8 +541,8 @@ export default function VenueDetail() {
                               status === 'available'
                                 ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold hover:scale-105"
                                 : status === 'partial'
-                                ? "bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold hover:scale-105"
-                                : "bg-zinc-800 text-white/20 border-white/5 cursor-not-allowed"
+                                  ? "bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold hover:scale-105"
+                                  : "bg-zinc-800 text-white/20 border-white/5 cursor-not-allowed"
                             )}
                           >
                             <span>{day}</span>
@@ -554,10 +554,10 @@ export default function VenueDetail() {
                       })}
                     </div>
                   </div>
- 
+
                   {/* Calendar details footer */}
                   <p className="text-xs text-white/50 text-center font-light leading-relaxed pt-2 border-t border-white/5">
-                    This location has an active booking rate of <span className="text-white font-semibold">₹{venue.pricePerNight}/{venue.bookingType === 'hours' ? 'hour' : 'day'}</span>. 
+                    This location has an active booking rate of <span className="text-white font-semibold">₹{venue.pricePerNight}/{venue.bookingType === 'hours' ? 'hour' : 'day'}</span>.
                     Dates highlighted in <span className="text-emerald-400 font-semibold">green</span> are open for booking.
                     {venue.bookingType === 'hours' && (
                       <span> Click on any day to select it and view available slots on the right widget.</span>

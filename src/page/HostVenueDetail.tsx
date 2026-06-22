@@ -475,32 +475,6 @@ export default function HostVenueDetail() {
             <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
             Back to My Listings
           </button>
-
-          {/* View / Edit Mode Tab selector */}
-          <div className="flex bg-[#0e0e12]/90 border border-white/10 p-1.5 rounded-full backdrop-blur-md">
-            <button
-              onClick={() => toggleEditMode(false)}
-              className={cn(
-                "px-5 py-1.5 rounded-full text-xs font-semibold transition-all",
-                !isEditing
-                  ? "bg-[#c5a059] text-black shadow-lg shadow-[#c5a059]/10"
-                  : "text-white/60 hover:text-white"
-              )}
-            >
-              Preview / View Mode
-            </button>
-            <button
-              onClick={() => toggleEditMode(true)}
-              className={cn(
-                "px-5 py-1.5 rounded-full text-xs font-semibold transition-all",
-                isEditing
-                  ? "bg-[#c5a059] text-black shadow-lg shadow-[#c5a059]/10"
-                  : "text-white/60 hover:text-white"
-              )}
-            >
-              Edit Venue Settings
-            </button>
-          </div>
         </div>
 
         {/* Title / Form Header */}
@@ -514,10 +488,26 @@ export default function HostVenueDetail() {
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
+              <div className="w-full">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
                   <Badge className="bg-[#c5a059]/10 text-[#c5a059] border border-[#c5a059]/20">Host Dashboard</Badge>
                   {venue.isTopRated && <Badge className="bg-[#c5a059] text-black font-bold uppercase tracking-widest text-[9px]">Luxury</Badge>}
+                  
+                  {/* Status Badge */}
+                  <span className={cn(
+                    "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border",
+                    venue.status === "approved"
+                      ? "bg-green-500/10 text-green-400 border-green-500/20"
+                      : venue.status === "declined"
+                      ? "bg-red-500/10 text-red-400 border-red-500/20"
+                      : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                  )}>
+                    <span className={cn(
+                      "w-1.5 h-1.5 rounded-full",
+                      venue.status === "approved" ? "bg-green-400" : venue.status === "declined" ? "bg-red-400" : "bg-yellow-400"
+                    )} />
+                    {venue.status ? venue.status.toUpperCase() : 'PENDING'}
+                  </span>
                 </div>
                 <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-tight text-white">
                   {venue.title}
@@ -526,6 +516,16 @@ export default function HostVenueDetail() {
                   <MapPin className="w-4 h-4 text-[#c5a059]" />
                   <span>{venue.fullAddress || venue.location}</span>
                 </div>
+
+                {venue.status === 'declined' && venue.rejectionReason && (
+                  <div className="mt-4 bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-start gap-3 text-red-400 text-sm max-w-xl">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-bold">Rejection Reason</h4>
+                      <p className="opacity-90 mt-1">{venue.rejectionReason}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1152,18 +1152,18 @@ export default function HostVenueDetail() {
                   {/* Actions buttons */}
                   <div className="space-y-3">
                     <Button
-                      onClick={() => toggleEditMode(true)}
+                      onClick={() => navigate('/dashboard')}
                       className="w-full bg-[#c5a059] hover:bg-[#b08e4d] text-black font-semibold rounded-2xl h-11 text-xs transition-all flex items-center justify-center gap-2"
                     >
-                      <Edit className="w-4 h-4" />
-                      Edit Venue Settings
+                      <Building className="w-4 h-4" />
+                      Go to Dashboard
                     </Button>
                     <Button
-                      onClick={() => navigate('/dashboard')}
+                      onClick={() => toggleEditMode(true)}
                       className="w-full bg-white/5 hover:bg-white/10 text-white rounded-2xl border border-white/10 h-11 text-xs transition-all flex items-center justify-center gap-2"
                     >
-                      <Building className="w-4 h-4 text-[#c5a059]" />
-                      Go to Dashboard
+                      <Edit className="w-4 h-4 text-[#c5a059]" />
+                      Edit Venue Settings
                     </Button>
                   </div>
                 </>

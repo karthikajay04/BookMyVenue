@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export type DayType = {
   day: string;
   classNames: string;
   meetingInfo?: {
+    id: string;
     date: string;
     time: string;
     title: string;
@@ -160,6 +162,7 @@ const InteractiveCalendar = React.forwardRef<
   HTMLDivElement,
   InteractiveCalendarProps
 >((({ className, bookings, ...props }, ref) => {
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [hoveredDay, setHoveredDay] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
@@ -260,6 +263,7 @@ const InteractiveCalendar = React.forwardRef<
             }
 
             return {
+              id: String(b.id),
               date: dateText,
               time: timeText,
               title: b.venueTitle,
@@ -424,25 +428,12 @@ const InteractiveCalendar = React.forwardRef<
                               <p className="mb-1 text-[11px] text-zinc-400">
                                 {meeting.participants.join(', ')}
                               </p>
-                              <div className="flex items-center text-blue-500">
-                                <svg
-                                  className="mr-1 h-3.5 w-3.5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                                  />
-                                </svg>
-                                <span className="text-[11px]">
-                                  {meeting.location}
-                                </span>
-                              </div>
+                              <button
+                                onClick={() => navigate(`/bookings?bookingId=${meeting.id}`)}
+                                className="mt-2 text-xs font-semibold text-[#c5a059] hover:underline flex items-center gap-1 transition-all"
+                              >
+                                View Details →
+                              </button>
                             </motion.div>
                           ))}
                       </motion.div>

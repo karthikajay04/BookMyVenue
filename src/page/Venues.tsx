@@ -287,7 +287,7 @@ export default function Venues() {
               pricePerNight={venue.pricePerNight}
               capacity={venue.capacity}
               eventTypes={venue.eventTypes}
-              className="border-white/10 bg-black/40 backdrop-blur-md shadow-2xl hover:border-[#c5a059]/40"
+              className="border-white/10 bg-black/40 backdrop-blur-md shadow-2xl"
               onClick={() => {
                 const user = JSON.parse(localStorage.getItem('user') || 'null');
                 if (user?.role === 'venue_owner') {

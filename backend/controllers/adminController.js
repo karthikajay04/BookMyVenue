@@ -1,17 +1,16 @@
 import { query } from '../db.js';
 
-// Get administrative dashboard statistics
+
 export const getDashboardStats = async (req, res) => {
   try {
-    // 1. Get user counts
+    // user counts
     const usersCountRes = await query("SELECT COUNT(*)::int AS count FROM users WHERE role = 'user'");
     const hostsCountRes = await query("SELECT COUNT(*)::int AS count FROM users WHERE role = 'venue_owner'");
     
-    // 2. Get venue counts
+    // venue counts
     const venuesCountRes = await query("SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE status = 'pending')::int AS pending, COUNT(*) FILTER (WHERE status = 'approved')::int AS approved FROM venues");
     
-    // 3. Get financial transactions stats
-    // We only charge 10% on paid web bookings (excluding cancelled or offline bookings)
+    // financialtransactions
     const financialRes = await query(`
       SELECT COALESCE(SUM(total_price), 0)::int AS "totalVolume" 
       FROM bookings 
@@ -19,7 +18,7 @@ export const getDashboardStats = async (req, res) => {
     `);
     
     const totalVolume = financialRes.rows[0].totalVolume;
-    const platformFeePercentage = 10; // 10% fee
+    const platformFeePercentage = 10; 
     const platformEarnings = Math.round(totalVolume * (platformFeePercentage / 100));
     const hostEarnings = totalVolume - platformEarnings;
     
@@ -43,7 +42,7 @@ export const getDashboardStats = async (req, res) => {
   }
 };
 
-// Get all venues for the admin dashboard list
+// all venues
 export const getAllVenues = async (req, res) => {
   try {
     const result = await query(`
@@ -76,6 +75,7 @@ export const getAllVenues = async (req, res) => {
       rules: row.rules,
       eventTypes: row.event_types,
       status: row.status || 'pending',
+      rejectionReason: row.rejection_reason || '',
       createdAt: row.created_at
     }));
     
@@ -89,7 +89,7 @@ export const getAllVenues = async (req, res) => {
 // Approve or decline a venue
 export const updateVenueStatus = async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body; // 'approved' or 'declined'
+  const { status, rejectionReason } = req.body; // 'approved' or 'declined'
 
   if (!status || !['approved', 'declined', 'pending'].includes(status)) {
     return res.status(400).json({ message: 'Invalid status value. Must be approved, declined, or pending.' });
@@ -101,10 +101,18 @@ export const updateVenueStatus = async (req, res) => {
       return res.status(404).json({ message: 'Venue not found' });
     }
 
-    const result = await query(
-      'UPDATE venues SET status = $1 WHERE id = $2 RETURNING *',
-      [status, id]
-    );
+    let result;
+    if (status === 'declined') {
+      result = await query(
+        'UPDATE venues SET status = $1, rejection_reason = $2 WHERE id = $3 RETURNING *',
+        [status, rejectionReason || '', id]
+      );
+    } else {
+      result = await query(
+        'UPDATE venues SET status = $1, rejection_reason = NULL WHERE id = $2 RETURNING *',
+        [status, id]
+      );
+    }
 
     res.json({
       success: true,
