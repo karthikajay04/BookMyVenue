@@ -46,9 +46,9 @@ export const getDashboardStats = async (req, res) => {
 export const getAllVenues = async (req, res) => {
   try {
     const result = await query(`
-      SELECT v.*, u.name AS "hostName" 
+      SELECT v.*, u.name AS "hostName", u.email AS host_email 
       FROM venues v
-      LEFT JOIN users u ON v.host_email = u.email
+      LEFT JOIN users u ON v.host_id = u.id
       ORDER BY v.id DESC
     `);
     
@@ -150,8 +150,8 @@ export const getAllBookings = async (req, res) => {
         h.email AS "hostMail"
       FROM bookings b
       JOIN venues v ON b.venue_id = v.id
-      JOIN users h ON v.host_email = h.email
-      LEFT JOIN users u ON b.user_email = u.email
+      JOIN users h ON v.host_id = h.id
+      LEFT JOIN users u ON b.user_id = u.id
       ORDER BY b.created_at DESC
     `);
     

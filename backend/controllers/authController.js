@@ -2,10 +2,10 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query } from '../db.js';
 
-// Generate secure JWT Token based on email and role
-const generateToken = (email, role) => {
+// Generate secure JWT Token based on id, email, and role
+const generateToken = (id, email, role) => {
   return jwt.sign(
-    { email, role },
+    { id, email, role },
     process.env.JWT_SECRET,
     { expiresIn: '7d' }
   );
@@ -44,14 +44,14 @@ export const registerUser = async (req, res) => {
 
     // 4. Insert new user into database
     const insertResult = await query(
-      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING name, email, role',
+      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
       [name.trim(), email.toLowerCase().trim(), hashedPassword, userRole]
     );
 
     const newUser = insertResult.rows[0];
 
     // 5. Generate and send JWT response
-    const token = generateToken(newUser.email, newUser.role);
+    const token = generateToken(newUser.id, newUser.email, newUser.role);
 
     res.status(201).json({
       success: true,
@@ -97,7 +97,7 @@ export const loginUser = async (req, res) => {
     }
 
     // 4. Generate JWT
-    const token = generateToken(user.email, user.role);
+    const token = generateToken(user.id, user.email, user.role);
 
     res.json({
       success: true,

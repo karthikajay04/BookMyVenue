@@ -2,7 +2,7 @@ import { query } from '../db.js';
 
 // Get bookings for user or venue owner
 export const getBookings = async (req, res) => {
-  const { email, role } = req.user;
+  const { id, email, role } = req.user;
 
   try {
     let result;
@@ -35,11 +35,11 @@ export const getBookings = async (req, res) => {
           b.booking_type AS "bookingType"
         FROM bookings b
         JOIN venues v ON b.venue_id = v.id
-        JOIN users h ON v.host_email = h.email
-        LEFT JOIN users u ON b.user_email = u.email
-        WHERE h.email = $1
+        JOIN users h ON v.host_id = h.id
+        LEFT JOIN users u ON b.user_id = u.id
+        WHERE h.id = $1
         ORDER BY b.created_at DESC
-      `, [email]);
+      `, [id]);
     } else {
       // Regular user sees bookings they have made
       result = await query(`
@@ -69,11 +69,11 @@ export const getBookings = async (req, res) => {
           b.booking_type AS "bookingType"
         FROM bookings b
         JOIN venues v ON b.venue_id = v.id
-        JOIN users h ON v.host_email = h.email
-        LEFT JOIN users u ON b.user_email = u.email
-        WHERE b.user_email = $1
+        JOIN users h ON v.host_id = h.id
+        LEFT JOIN users u ON b.user_id = u.id
+        WHERE b.user_id = $1
         ORDER BY b.created_at DESC
-      `, [email]);
+      `, [id]);
     }
 
     res.json(result.rows);
@@ -86,7 +86,7 @@ export const getBookings = async (req, res) => {
 // Create a new booking
 export const createBooking = async (req, res) => {
   const { venueId, startDate, endDate, guests, totalPrice, renterName, renterPhone, renterEmail } = req.body;
-  const user_email = req.user.email;
+  const user_id = req.user.id;
 
   try {
     if (!venueId || !startDate || !endDate || !guests || !totalPrice || !renterName || !renterPhone || !renterEmail) {
@@ -182,11 +182,11 @@ export const createBooking = async (req, res) => {
 
     const result = await query(`
       INSERT INTO bookings (
-        id, venue_id, user_email, start_date, end_date, guests, total_price, status, payment_status, check_in_instructions, renter_name, renter_phone, renter_email, booking_type
+        id, venue_id, user_id, start_date, end_date, guests, total_price, status, payment_status, check_in_instructions, renter_name, renter_phone, renter_email, booking_type
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `, [
-      bookingId, venueId, user_email, startDate, endDate, guests, totalPrice, 'upcoming', 'paid', checkInInstructions, renterName, renterPhone, renterEmail, venue.booking_type || 'days'
+      bookingId, venueId, user_id, startDate, endDate, guests, totalPrice, 'upcoming', 'paid', checkInInstructions, renterName, renterPhone, renterEmail, venue.booking_type || 'days'
     ]);
 
     res.status(201).json({
@@ -202,7 +202,7 @@ export const createBooking = async (req, res) => {
 // Cancel a booking
 export const cancelBooking = async (req, res) => {
   const { id } = req.params;
-  const { email, role } = req.user;
+  const { id: userId, role } = req.user;
 
   try {
     // Check if booking exists
@@ -214,11 +214,11 @@ export const cancelBooking = async (req, res) => {
 
     // Verify user owns the booking or the venue being booked
     if (role === 'venue_owner') {
-      const venueRes = await query('SELECT host_email FROM venues WHERE id = $1', [booking.venue_id]);
-      if (venueRes.rows.length === 0 || venueRes.rows[0].host_email !== email) {
+      const venueRes = await query('SELECT host_id FROM venues WHERE id = $1', [booking.venue_id]);
+      if (venueRes.rows.length === 0 || venueRes.rows[0].host_id !== userId) {
         return res.status(403).json({ message: 'Not authorized to cancel bookings for this venue' });
       }
-    } else if (booking.user_email !== email) {
+    } else if (booking.user_id !== userId) {
       return res.status(403).json({ message: 'Not authorized to cancel this booking' });
     }
 
@@ -243,7 +243,7 @@ export const cancelBooking = async (req, res) => {
 // Lock a venue for offline bookings/maintenance (Venue Owners)
 export const lockVenue = async (req, res) => {
   const { venueId, startDate, endDate, notes, totalPrice, guests, renterName, renterPhone, renterEmail } = req.body;
-  const host_email = req.user.email;
+  const host_id = req.user.id;
 
   try {
     if (!venueId || !startDate || !endDate || !renterName || !renterPhone || !renterEmail) {
@@ -256,7 +256,7 @@ export const lockVenue = async (req, res) => {
       return res.status(404).json({ message: 'Venue not found' });
     }
     const venue = venueRes.rows[0];
-    if (venue.host_email !== host_email) {
+    if (venue.host_id !== host_id) {
       return res.status(403).json({ message: 'Not authorized to lock this venue' });
     }
 
@@ -331,7 +331,7 @@ export const lockVenue = async (req, res) => {
 
     const result = await query(`
       INSERT INTO bookings (
-        id, venue_id, user_email, start_date, end_date, guests, total_price, status, payment_status, check_in_instructions, renter_name, renter_phone, renter_email, booking_type
+        id, venue_id, user_id, start_date, end_date, guests, total_price, status, payment_status, check_in_instructions, renter_name, renter_phone, renter_email, booking_type
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `, [
