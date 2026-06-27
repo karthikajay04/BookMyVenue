@@ -204,8 +204,8 @@ export default function HostDashboard(): React.JSX.Element {
         triggerToast('Lock start date cannot be in the past.', 'error');
         return;
       }
-      if (end < start) {
-        triggerToast('Unlock date cannot precede lock date.', 'error');
+      if (end <= start) {
+        triggerToast('Unlock date must be after lock date.', 'error');
         return;
       }
     }

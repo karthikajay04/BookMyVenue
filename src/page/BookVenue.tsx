@@ -32,6 +32,8 @@ export default function BookVenue() {
 
   // Hours-based states
   const [bookedSlots, setBookedSlots] = useState<any[]>([]);
+  const [availabilitySlots, setAvailabilitySlots] = useState<any[]>([]);
+  const [unavailableDates, setUnavailableDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [startHour, setStartHour] = useState('');
   const [endHour, setEndHour] = useState('');
@@ -88,7 +90,7 @@ export default function BookVenue() {
     }
   }, [id]);
 
-  // Fetch booked slots for the venue
+  // Fetch booked slots for the venue (used for calendar display indicators)
   useEffect(() => {
     const fetchBookedSlots = async () => {
       try {
@@ -105,6 +107,32 @@ export default function BookVenue() {
       fetchBookedSlots();
     }
   }, [id, bookingStep]);
+
+  // Fetch actual venue availability from the backend availability endpoint
+  useEffect(() => {
+    const fetchAvailability = async () => {
+      if (!id || !venue) return;
+      try {
+        const url = venue.bookingType === 'hours'
+          ? `http://localhost:5000/api/venues/${id}/availability?date=${selectedDate}`
+          : `http://localhost:5000/api/venues/${id}/availability`;
+        const response = await fetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          if (venue.bookingType === 'hours') {
+            setAvailabilitySlots(data.slots || []);
+          } else {
+            setUnavailableDates(data.unavailableDates || []);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch venue availability:', err);
+      }
+    };
+    if (id && venue && bookingStep !== 'success') {
+      fetchAvailability();
+    }
+  }, [id, venue, selectedDate, bookingStep]);
 
   // Scroll to top on mount
   useEffect(() => {
@@ -222,46 +250,35 @@ export default function BookVenue() {
   };
 
   const getSlotStatus = (hStart: string, hEnd: string) => {
-    if (!selectedDate) return 'available';
-    const slotStart = new Date(combineDateAndHour(selectedDate, hStart));
-    const slotEnd = new Date(combineDateAndHour(selectedDate, hEnd));
-
-    for (const b of bookedSlots) {
-      const bStart = new Date(b.startDate);
-      const bEnd = new Date(b.endDate);
-      const gapHours = Number(venue?.cleaningGap || 0);
-      const bCleaningEnd = new Date(bEnd.getTime() + gapHours * 60 * 60 * 1000);
-
-      if (slotStart < bEnd && bStart < slotEnd) {
-        return 'booked';
-      }
-      if (slotStart < bCleaningEnd && bEnd <= slotStart) {
-        return 'cleaning';
-      }
-    }
-    return 'available';
+    const matched = availabilitySlots.find(s => s.start === hStart && s.end === hEnd);
+    return matched ? matched.status : 'available';
   };
 
   const getHourBookingError = () => {
     if (venue.bookingType !== 'hours') return '';
     if (!selectedDate || !startHour || !endHour) return '';
-    const start = new Date(combineDateAndHour(selectedDate, startHour));
-    const end = new Date(combineDateAndHour(selectedDate, endHour));
 
-    if (end <= start) {
+    const getMinutes = (tStr: string) => {
+      const [h, m] = tStr.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    const startMin = getMinutes(startHour);
+    const endMin = getMinutes(endHour);
+
+    if (endMin <= startMin) {
       return 'End time must be after start time.';
     }
 
-    // Check overlap
-    const hasOverlap = bookedSlots.some(b => {
-      const bStart = new Date(b.startDate);
-      const bEnd = new Date(b.endDate);
+    // Check overlap by inspecting if any slot within [startHour, endHour) is not available
+    const hasOverlap = availabilitySlots.some(slot => {
+      const slotStartMin = getMinutes(slot.start);
+      const slotEndMin = getMinutes(slot.end);
 
-      const gapHours = Number(venue.cleaningGap || 0);
-      const limitNewEnd = new Date(end.getTime() + gapHours * 60 * 60 * 1000);
-      const limitExistingEnd = new Date(bEnd.getTime() + gapHours * 60 * 60 * 1000);
-
-      return start < limitExistingEnd && bStart < limitNewEnd;
+      if (slotStartMin < endMin && startMin < slotEndMin) {
+        return slot.status !== 'available';
+      }
+      return false;
     });
 
     if (hasOverlap) {
@@ -295,13 +312,34 @@ export default function BookVenue() {
     if (start < today) {
       return 'Check-in date cannot be in the past.';
     }
-    if (end < start) {
+    if (end <= start) {
       return 'Check-out date must be after check-in date.';
     }
     if (start > limit || end > limit) {
       const formattedLimit = limit.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       return `Website bookings are only available for dates within the next 30 days (up to ${formattedLimit}). For future dates, please contact the venue owner for an offline booking.`;
     }
+
+    // Check overlap with daily blocked dates from backend
+    const getLocalDateStr = (d: Date) => {
+      const pad = (num: number) => String(num).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    };
+
+    const hasOverlap = [];
+    const loopDate = new Date(start);
+    while (loopDate < end) {
+      const dStr = getLocalDateStr(loopDate);
+      if (unavailableDates.includes(dStr)) {
+        hasOverlap.push(dStr);
+      }
+      loopDate.setDate(loopDate.getDate() + 1);
+    }
+
+    if (hasOverlap.length > 0) {
+      return 'The selected dates conflict with an existing booking.';
+    }
+
     return '';
   };
 
@@ -676,11 +714,21 @@ export default function BookVenue() {
                     </div>
                   )}
 
-                  <div className="bg-[#c5a059]/5 border border-[#c5a059]/10 text-white/70 text-xs rounded-xl p-3.5 flex items-start gap-2.5 leading-relaxed">
-                    <Info className="w-4 h-4 text-[#c5a059] flex-shrink-0 mt-0.5" />
-                    <span>
-                      <strong>Booking Window Limit:</strong> Stays are only bookable online up to 30 days in advance (up to {maxDate.toLocaleDateString()}). For dates further out, contact support.
-                    </span>
+                  <div className="bg-[#c5a059]/5 border border-[#c5a059]/10 text-white/70 text-xs rounded-xl p-3.5 flex flex-col gap-2.5 leading-relaxed">
+                    <div className="flex items-start gap-2.5">
+                      <Info className="w-4 h-4 text-[#c5a059] flex-shrink-0 mt-0.5" />
+                      <span>
+                        <strong>Booking Window Limit:</strong> Stays are only bookable online up to 30 days in advance (up to {maxDate.toLocaleDateString()}). For dates further out, contact support.
+                      </span>
+                    </div>
+                    {!isHours && (
+                      <div className="flex items-start gap-2.5 pt-2.5 border-t border-white/5">
+                        <Info className="w-4 h-4 text-[#c5a059] flex-shrink-0 mt-0.5" />
+                        <span>
+                          <strong>Event Time Policy:</strong> Check-in is at <strong>12:00 AM (midnight)</strong> on your check-in date, and check-out is by <strong>12:00 PM (noon)</strong> on your check-out date. *For a single-day event, select check-out as the day after your event.*
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex justify-end pt-4">

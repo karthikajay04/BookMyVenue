@@ -14,6 +14,9 @@ export const getBookings = async (req, res) => {
           b.venue_id AS "venueId",
           v.title AS "venueTitle",
           v.location AS "venueLocation",
+          v.full_address AS "fullAddress",
+          v.latitude,
+          v.longitude,
           v.images[1] AS "venueImage",
           b.start_date AS "startDate",
           b.end_date AS "endDate",
@@ -48,6 +51,9 @@ export const getBookings = async (req, res) => {
           b.venue_id AS "venueId",
           v.title AS "venueTitle",
           v.location AS "venueLocation",
+          v.full_address AS "fullAddress",
+          v.latitude,
+          v.longitude,
           v.images[1] AS "venueImage",
           b.start_date AS "startDate",
           b.end_date AS "endDate",
@@ -76,7 +82,13 @@ export const getBookings = async (req, res) => {
       `, [id]);
     }
 
-    res.json(result.rows);
+    const mappedBookings = result.rows.map(row => ({
+      ...row,
+      latitude: row.latitude !== null && row.latitude !== undefined ? Number(row.latitude) : null,
+      longitude: row.longitude !== null && row.longitude !== undefined ? Number(row.longitude) : null,
+    }));
+
+    res.json(mappedBookings);
   } catch (error) {
     console.error('Error fetching bookings:', error);
     res.status(500).json({ message: 'Error fetching bookings' });
@@ -106,6 +118,11 @@ export const createBooking = async (req, res) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
     
+    if (venue.booking_type !== 'hours') {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(12, 0, 0, 0);
+    }
+    
     const maxAllowed = new Date(today);
     maxAllowed.setDate(today.getDate() + 30);
     maxAllowed.setHours(23, 59, 59, 999);
@@ -113,7 +130,7 @@ export const createBooking = async (req, res) => {
     if (start < today) {
       return res.status(400).json({ message: 'Booking time cannot be in the past.' });
     }
-    if (end < start) {
+    if (end <= start) {
       return res.status(400).json({ message: 'End time must be after start time.' });
     }
     if (start > maxAllowed || end > maxAllowed) {
@@ -146,13 +163,22 @@ export const createBooking = async (req, res) => {
 
     // Schedule overlap conflict validation
     const existingBookings = await query(`
-      SELECT start_date, end_date, booking_type FROM bookings 
+      SELECT start_date, end_date, blocked_end_date, booking_type FROM bookings 
       WHERE venue_id = $1 AND status != 'cancelled'
     `, [venueId]);
+
+    const cleaningGap = Number(venue.cleaning_gap || 0);
+    let blockedEndDate;
+    if (venue.booking_type === 'hours') {
+      blockedEndDate = new Date(end.getTime() + cleaningGap * 60 * 60 * 1000);
+    } else {
+      blockedEndDate = new Date(end.getTime() + 12 * 60 * 60 * 1000 + cleaningGap * 24 * 60 * 60 * 1000);
+    }
 
     const hasOverlap = existingBookings.rows.some(b => {
       const bStart = new Date(b.start_date);
       const bEnd = new Date(b.end_date);
+      const bBlockedEnd = new Date(b.blocked_end_date);
       
       if (venue.booking_type === 'hours') {
         const gapHours = Number(venue.cleaning_gap || 0);
@@ -161,7 +187,7 @@ export const createBooking = async (req, res) => {
         
         return start < limitExistingEnd && bStart < limitNewEnd;
       } else {
-        return start < bEnd && bStart < end;
+        return start < bBlockedEnd && bStart < blockedEndDate;
       }
     });
 
@@ -178,21 +204,35 @@ export const createBooking = async (req, res) => {
     const bookingId = `BKG-${randomNum}`;
 
     const checkInCode = Math.floor(1000 + Math.random() * 9000);
-    const checkInInstructions = `Secure entry code: #${checkInCode}. Welcome to ${venue.title}! Check-in starts at 2:00 PM.`;
+    const checkInInstructions = venue.booking_type === 'hours'
+      ? `Secure entry code: #${checkInCode}. Welcome to ${venue.title}! Please check in and out according to your reserved hours.`
+      : `Secure entry code: #${checkInCode}. Welcome to ${venue.title}! Check-in starts at 12:00 AM (midnight) on your start date, and check-out is by 12:00 PM (noon) on your end date.`;
 
-    const result = await query(`
-      INSERT INTO bookings (
-        id, venue_id, user_id, start_date, end_date, guests, total_price, status, payment_status, check_in_instructions, renter_name, renter_phone, renter_email, booking_type
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      RETURNING *
-    `, [
-      bookingId, venueId, user_id, startDate, endDate, guests, totalPrice, 'upcoming', 'paid', checkInInstructions, renterName, renterPhone, renterEmail, venue.booking_type || 'days'
-    ]);
+    try {
+      await query('BEGIN');
 
-    res.status(201).json({
-      success: true,
-      booking: result.rows[0]
-    });
+      const result = await query(`
+        INSERT INTO bookings (
+          id, venue_id, user_id, start_date, end_date, blocked_end_date, cleaning_gap, guests, total_price, status, payment_status, check_in_instructions, renter_name, renter_phone, renter_email, booking_type
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        RETURNING *
+      `, [
+        bookingId, venueId, user_id, start, end, blockedEndDate, cleaningGap, guests, totalPrice, 'upcoming', 'paid', checkInInstructions, renterName, renterPhone, renterEmail, venue.booking_type || 'days'
+      ]);
+
+      await query('COMMIT');
+
+      res.status(201).json({
+        success: true,
+        booking: result.rows[0]
+      });
+    } catch (dbError) {
+      await query('ROLLBACK');
+      if (dbError.code === '23P01') {
+        return res.status(409).json({ message: 'This venue has just been booked by another customer.' });
+      }
+      throw dbError;
+    }
   } catch (error) {
     console.error('Error creating booking:', error);
     res.status(500).json({ message: 'Error creating booking' });
@@ -266,11 +306,16 @@ export const lockVenue = async (req, res) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
+    if (venue.booking_type !== 'hours') {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(12, 0, 0, 0);
+    }
+
     if (start < today) {
       return res.status(400).json({ message: 'Lock start date cannot be in the past.' });
     }
-    if (end < start) {
-      return res.status(400).json({ message: 'Unlock date cannot precede lock start date.' });
+    if (end <= start) {
+      return res.status(400).json({ message: 'Unlock date must be after lock start date.' });
     }
 
     // Operating hours check for hours-based booking
@@ -296,13 +341,22 @@ export const lockVenue = async (req, res) => {
 
     // Schedule overlap conflict validation
     const existingBookings = await query(`
-      SELECT start_date, end_date, booking_type FROM bookings 
+      SELECT start_date, end_date, blocked_end_date, booking_type FROM bookings 
       WHERE venue_id = $1 AND status != 'cancelled'
     `, [venueId]);
+
+    const cleaningGap = Number(venue.cleaning_gap || 0);
+    let blockedEndDate;
+    if (venue.booking_type === 'hours') {
+      blockedEndDate = new Date(end.getTime() + cleaningGap * 60 * 60 * 1000);
+    } else {
+      blockedEndDate = new Date(end.getTime() + 12 * 60 * 60 * 1000 + cleaningGap * 24 * 60 * 60 * 1000);
+    }
 
     const hasOverlap = existingBookings.rows.some(b => {
       const bStart = new Date(b.start_date);
       const bEnd = new Date(b.end_date);
+      const bBlockedEnd = new Date(b.blocked_end_date);
       
       if (venue.booking_type === 'hours') {
         const gapHours = Number(venue.cleaning_gap || 0);
@@ -311,7 +365,7 @@ export const lockVenue = async (req, res) => {
         
         return start < limitExistingEnd && bStart < limitNewEnd;
       } else {
-        return start < bEnd && bStart < end;
+        return start < bBlockedEnd && bStart < blockedEndDate;
       }
     });
 
@@ -329,19 +383,31 @@ export const lockVenue = async (req, res) => {
 
     const checkInInstructions = notes || 'Venue locked for offline event or maintenance.';
 
-    const result = await query(`
-      INSERT INTO bookings (
-        id, venue_id, user_id, start_date, end_date, guests, total_price, status, payment_status, check_in_instructions, renter_name, renter_phone, renter_email, booking_type
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      RETURNING *
-    `, [
-      bookingId, venueId, null, startDate, endDate, guests || 0, totalPrice || 0, 'offline', 'offline', checkInInstructions, renterName, renterPhone, renterEmail, venue.booking_type || 'days'
-    ]);
+    try {
+      await query('BEGIN');
 
-    res.status(201).json({
-      success: true,
-      booking: result.rows[0]
-    });
+      const result = await query(`
+        INSERT INTO bookings (
+          id, venue_id, user_id, start_date, end_date, blocked_end_date, cleaning_gap, guests, total_price, status, payment_status, check_in_instructions, renter_name, renter_phone, renter_email, booking_type
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        RETURNING *
+      `, [
+        bookingId, venueId, null, start, end, blockedEndDate, cleaningGap, guests || 0, totalPrice || 0, 'offline', 'offline', checkInInstructions, renterName, renterPhone, renterEmail, venue.booking_type || 'days'
+      ]);
+
+      await query('COMMIT');
+
+      res.status(201).json({
+        success: true,
+        booking: result.rows[0]
+      });
+    } catch (dbError) {
+      await query('ROLLBACK');
+      if (dbError.code === '23P01') {
+        return res.status(409).json({ message: 'This venue has just been booked by another customer.' });
+      }
+      throw dbError;
+    }
   } catch (error) {
     console.error('Error locking venue:', error);
     res.status(500).json({ message: 'Error locking venue' });
@@ -367,5 +433,194 @@ export const getVenueBookings = async (req, res) => {
   } catch (error) {
     console.error('Error fetching venue bookings:', error);
     res.status(500).json({ message: 'Error fetching venue bookings' });
+  }
+};
+
+export const getVenueAvailability = async (req, res) => {
+  const { id } = req.params;
+  try {
+    // 1. Fetch venue details to see if it's days-based or hours-based
+    const venueRes = await query('SELECT id, booking_type, cleaning_gap, opening_time, closing_time FROM venues WHERE id = $1', [id]);
+    if (venueRes.rows.length === 0) {
+      return res.status(404).json({ message: 'Venue not found' });
+    }
+    const venue = venueRes.rows[0];
+    const isHours = venue.booking_type === 'hours';
+
+    if (isHours) {
+      // Hours-based availability check
+      let { date } = req.query;
+      if (!date) {
+        const today = new Date();
+        const pad = (num) => String(num).padStart(2, '0');
+        date = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+      }
+
+      // Generate timeline slots for operating hours
+      const parseTimeStr = (tStr) => {
+        if (!tStr) return 0;
+        const [h, m] = tStr.split(':').map(Number);
+        return h * 60 + m;
+      };
+
+      const startMin = parseTimeStr(venue.opening_time || '08:00');
+      const endMin = parseTimeStr(venue.closing_time || '22:00');
+      const slots = [];
+      for (let min = startMin; min + 60 <= endMin; min += 60) {
+        const sh = Math.floor(min / 60);
+        const sm = min % 60;
+        const eh = Math.floor((min + 60) / 60);
+        const em = (min + 60) % 60;
+        const startStr = `${String(sh).padStart(2, '0')}:${String(sm).padStart(2, '0')}`;
+        const endStr = `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`;
+        slots.push({ start: startStr, end: endStr });
+      }
+
+      // Fetch bookings that touch the requested date
+      const bookingsRes = await query(`
+        SELECT start_date, end_date, blocked_end_date, cleaning_gap 
+        FROM bookings 
+        WHERE venue_id = $1 
+          AND status != 'cancelled' 
+          AND start_date < $2 
+          AND end_date > $3
+      `, [id, `${date} 23:59:59`, `${date} 00:00:00`]);
+
+      const combineDateAndHour = (dateStr, hourStr) => {
+        return new Date(`${dateStr}T${hourStr}:00`);
+      };
+
+      const slotsWithStatus = slots.map(slot => {
+        const slotStart = combineDateAndHour(date, slot.start);
+        const slotEnd = combineDateAndHour(date, slot.end);
+        let status = 'available';
+
+        for (const b of bookingsRes.rows) {
+          const bStart = new Date(b.start_date);
+          const bEnd = new Date(b.end_date);
+          const bBlockedEnd = new Date(b.blocked_end_date);
+
+          if (slotStart < bEnd && bStart < slotEnd) {
+            status = 'booked';
+            break;
+          }
+          if (slotStart < bBlockedEnd && bEnd <= slotStart) {
+            status = 'cleaning';
+            break;
+          }
+        }
+
+        return { ...slot, status };
+      });
+
+      return res.json({
+        bookingType: 'hours',
+        slots: slotsWithStatus
+      });
+
+    } else {
+      // Days-based availability check
+      // Query all bookings for this venue
+      const bookingsRes = await query(`
+        SELECT start_date, blocked_end_date, status 
+        FROM bookings 
+        WHERE venue_id = $1 AND status != 'cancelled'
+      `, [id]);
+
+      const unavailableDates = [];
+      const getLocalDateStr = (d) => {
+        const pad = (num) => String(num).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      };
+
+      for (const b of bookingsRes.rows) {
+        const start = new Date(b.start_date);
+        const blockedEnd = new Date(b.blocked_end_date);
+        
+        // Loop from start date up to blocked_end_date - 1 day (checkout is allowed on the checkout day)
+        for (let d = new Date(start); d < blockedEnd; d.setDate(d.getDate() + 1)) {
+          unavailableDates.push(getLocalDateStr(d));
+        }
+      }
+
+      // Deduplicate the array
+      const uniqueUnavailableDates = [...new Set(unavailableDates)];
+
+      return res.json({
+        bookingType: 'days',
+        unavailableDates: uniqueUnavailableDates
+      });
+    }
+
+  } catch (error) {
+    console.error('Error fetching venue availability:', error);
+    res.status(500).json({ message: 'Error fetching venue availability' });
+  }
+};
+
+// Get details for a single booking by ID
+export const getBookingById = async (req, res) => {
+  const { id } = req.params;
+  const { id: userId, role } = req.user;
+
+  try {
+    const result = await query(`
+      SELECT 
+        b.id,
+        b.venue_id AS "venueId",
+        v.title AS "venueTitle",
+        v.location AS "venueLocation",
+        v.full_address AS "fullAddress",
+        v.latitude,
+        v.longitude,
+        v.images[1] AS "venueImage",
+        b.start_date AS "startDate",
+        b.end_date AS "endDate",
+        b.guests,
+        b.total_price AS "totalPrice",
+        b.status,
+        b.booking_date AS "bookingDate",
+        b.payment_status AS "paymentStatus",
+        COALESCE(b.renter_name, u.name) AS "renterName",
+        COALESCE(b.renter_email, u.email) AS "renterEmail",
+        b.renter_phone AS "renterPhone",
+        h.name AS "hostName",
+        h.email AS "hostMail",
+        b.check_in_instructions AS "checkInInstructions",
+        v.booking_type AS "venueBookingType",
+        v.cleaning_gap AS "venueCleaningGap",
+        v.opening_time AS "venueOpeningTime",
+        v.closing_time AS "venueClosingTime",
+        b.booking_type AS "bookingType",
+        b.user_id AS "userId",
+        v.host_id AS "hostId"
+      FROM bookings b
+      JOIN venues v ON b.venue_id = v.id
+      JOIN users h ON v.host_id = h.id
+      LEFT JOIN users u ON b.user_id = u.id
+      WHERE b.id = $1
+    `, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    const booking = result.rows[0];
+
+    // Authorization check
+    if (role !== 'admin' && booking.userId !== userId && booking.hostId !== userId) {
+      return res.status(403).json({ message: 'Not authorized to view this booking' });
+    }
+
+    const mappedBooking = {
+      ...booking,
+      latitude: booking.latitude !== null && booking.latitude !== undefined ? Number(booking.latitude) : null,
+      longitude: booking.longitude !== null && booking.longitude !== undefined ? Number(booking.longitude) : null,
+    };
+
+    res.json(mappedBooking);
+  } catch (error) {
+    console.error('Error fetching booking details:', error);
+    res.status(500).json({ message: 'Error fetching booking details' });
   }
 };
