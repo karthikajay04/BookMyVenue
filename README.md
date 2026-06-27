@@ -1,94 +1,135 @@
 # 🏰 BookMyVenue
 
-BookMyVenue is a premium, luxury-themed venue booking and management platform. The application is built using a modern **React + Vite** frontend with **Tailwind CSS** and **Framer Motion** for a sleek, glassmorphic visual interface, backed by an **Express.js + PostgreSQL** server. 
+A premium, luxury-themed venue discovery, booking, and marketplace management system. Built using a sleek glassmorphic visual design, this full-stack application connects renters looking for exquisite event spaces with venue hosts, all supervised by a multi-role administrative platform.
 
-Whether you are a customer looking for an exquisite event space, a venue owner looking to list and manage bookings, or an administrator supervising the platform, BookMyVenue provides an end-to-end dashboard and scheduling gateway.
+---
+
+[![Vite](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-blue?style=for-the-badge&logo=vite)](https://vite.dev)
+[![Express](https://img.shields.io/badge/Backend-Express.js-black?style=for-the-badge&logo=express)](https://expressjs.com)
+[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-blue?style=for-the-badge&logo=postgresql)](https://www.postgresql.org)
+[![TailwindCSS](https://img.shields.io/badge/Styling-Tailwind%20CSS-38B2AC?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com)
+[![Framer Motion](https://img.shields.io/badge/Animations-Framer%20Motion-F01F7A?style=for-the-badge&logo=framer)](https://www.framer.com/motion/)
+[![MapLibre GL](https://img.shields.io/badge/Maps-MapLibre%20GL-lightgrey?style=for-the-badge&logo=mapbox)](https://maplibre.org/)
+[![License](https://img.shields.io/badge/License-Proprietary-gold?style=for-the-badge)](<!-- VERIFY -->)
 
 ---
 
 ## 📖 Table of Contents
-1. [Core Features](#-core-features)
-2. [System Architecture & Design](#-system-architecture--design)
-3. [Database Schema](#-database-schema)
-4. [API Endpoints Reference](#-api-endpoints-reference)
-5. [Getting Started & Installation](#-getting-started--installation)
+1. [About & Overview](#-about--overview)
+2. [Demo](#-demo)
+3. [Key Features](#-key-features)
+4. [System Architecture](#-system-architecture)
+5. [Tech Stack](#-tech-stack)
+6. [Database Schema](#-database-schema)
+7. [Folder Structure](#-folder-structure)
+8. [Getting Started](#-getting-started)
    - [Prerequisites](#prerequisites)
-   - [Database Setup](#1-database-setup)
+   - [Database Setup & Seeding](#1-database-setup--seeding)
    - [Backend Setup](#2-backend-setup)
    - [Frontend Setup](#3-frontend-setup)
-6. [Booking Rules & Conflict Validation](#-booking-rules--conflict-validation)
+9. [API Reference](#-api-reference)
+10. [Usage Examples](#-usage-examples)
+11. [Roadmap](#-roadmap)
+12. [Contributing](#-contributing)
+13. [License](#-license)
+14. [Contact](#-contact)
 
 ---
 
-## ✨ Core Features
+## 🏰 About & Overview
 
-The system is designed around three distinct user roles, each with a specialized dashboard and set of workflows:
+**BookMyVenue** is a state-of-the-art marketplace for renting premium event locations, mansions, banquet halls, and creative spaces. Featuring distinct portal dashboards tailored to **Customers (Renters)**, **Venue Owners (Hosts)**, and **Platform Administrators**, the system ensures a unified, safe booking flow. By combining MapLibre GL geolocation markers with PostgreSQL GiST exclusion logic, BookMyVenue guarantees that venue searches and schedule bookings are completely conflict-free.
 
-### 1. 👤 Customers (Renters)
-* **Venue Discovery**: Browse handpicked luxury venues with dynamic filters for location, guest capacity, and search queries (title, description, location).
-* **Interactive Booking Calendar**: View real-time availability on a monthly calendar grid.
-* **Flexible Bookings**: Book venues either **daily** or **hourly** (depending on the venue's setup).
-* **Booking Panel**: Check upcoming and past reservations, cancel bookings, view secure check-in codes, and access custom instructions.
+---
 
-### 2. 🏡 Venue Owners (Hosts)
-* **Owner Dashboard**: Track hosted listings, check active reservations, and view customer contact info.
-* **Interactive Calendar Visualization**: View all bookings layered chronologically in a visual calendar.
-* **Detailed Listing Form**: List new venues with customizable specifications (size, guest capacity, image gallery, hourly operating hours, and preset/custom amenities or event categories).
-* **Offline Lock / Maintenance Mode**: Prevent double bookings by locking out dates or hours for offline/maintenance blocks.
-* **Local Upload Integration**: Upload venue preview photos locally via the media manager.
+## 📸 Demo
 
-### 3. 🛡️ Platform Administrators
-* **Admin Dashboard Stats**: Monitor total renters, active hosts, approved vs. pending venues, total transaction volume, platform commission earnings (10%), and host earnings (90%).
+<!-- ADD SCREENSHOT HERE -->
+*Placeholder: Visual walkthrough of the glassmorphic desktop interface dashboard.*
+
+---
+
+## ✨ Key Features
+
+### 👤 For Customers (Renters)
+* **Venue Discovery**: Browse handpicked locations using live search filters matching guest capacity, location, keywords, and booking formats.
+* **Interactive Geolocation Map**: Powered by MapLibre GL and OpenStreetMap, showing listings on dynamic maps.
+* **Flexible Bookings**: Lock in reservations on an **hourly** basis (with operating hour buffers) or a **daily** (overnight) basis.
+* **Renter Calendar**: View availability in real-time, compute totals instantly, and confirm upcoming blocks.
+* **My Bookings Gateway**: Check check-in instructions, dynamic secure access door codes, active payment statuses, or cancel future visits.
+
+### 🏡 For Venue Owners (Hosts)
+* **Owner Dashboard**: Real-time stats on listing counts, rental reservation listings, active customer contact lines, and earnings.
+* **Visual Reservation Timelines**: Track layered, chronologically ordered booking records in a visual dashboard schedule component.
+* **Listing Submissions**: Fill details including size metrics, guest thresholds, parking conditions, custom regulations, custom event category tags, hourly operating windows, and a map location picker.
+* **Offline Locks & Maintenance Mode**: Blocks dates or hours for private events or offline repairs directly from the calendar, avoiding double bookings.
+* **Media Upload Manager**: Upload venue preview photos locally via the media manager (stored locally via Node Multer).
+
+### 🛡️ For Platform Administrators
+* **Admin Dashboard KPIs**: Monitor active customer accounts, host listings, total platform transaction volumes, platform commission (10%), and host payout allocations (90%).
 * **Verification Workflow**: Review newly submitted venue listings in a pending status. Approve or decline listings (with specific rejection reasons shown to the host).
-* **Global Booking Log**: Audit all reservations, payments, and booking types across the entire marketplace.
-* **User Management**: View and search all registered platform accounts.
+* **Global Booking Auditor**: Review and inspect payment statuses and date range records across the entire marketplace.
+* **Access Control**: Live-search and update details for all registered accounts.
+
+### ⚡ Resiliency & Fallback Mode
+* **Hybrid Data Fallback**: The React client includes a failover fallback. If the PostgreSQL/Express server is unreachable, the client will **gracefully fall back to local browser storage** using pre-configured mock venue records ([venuesData.ts](file:///d:/1/BookMyVenue%20test2/src/data/venuesData.ts)) to allow demo presentations and offline testing.
 
 ---
 
-## 🏗️ System Architecture & Design
+## 🏗️ System Architecture
 
-BookMyVenue utilizes a decoupled client-server architecture:
+BookMyVenue runs on a decoupled client-server architecture. Client requests are securely authenticated using JWT Bearer tokens.
 
-```
-┌──────────────────────────────────────┐
-│       Frontend Client (Vite)         │
-│  React + Tailwind CSS + Framer Motion│
-└──────────────────┬───────────────────┘
-                   │
-           REST API (JSON / JWT)
-                   │
-┌──────────────────▼───────────────────┐
-│       Backend Server (Express)       │
-│    Node.js Gateway & JWT Middleware  │
-└──────┬────────────────────────┬──────┘
-       │                        │
-  Local Files                Queries
-       │                        │
-┌──────▼──────────────┐  ┌──────▼──────┐
-│  Uploads Directory  │  │  Database   │
-│   (Local Storage)   │  │(PostgreSQL) │
-└─────────────────────┘  └─────────────┘
+```mermaid
+graph TD
+    A[React Web Client<br/>Vite / Tailwind / MapLibre] <-->|HTTP JSON REST + JWT| B[Express.js Gateway<br/>server.js]
+    B -->|Upload Requests| C[Multer Middleware]
+    B -->|Auth & Role Verification| D[authMiddleware.js]
+    C -->|Store Images| E[uploads/ Directory]
+    B -->|Database Operations| F[node-postgres Client]
+    F <-->|Queries & Exclusion Checks| G[(PostgreSQL DB)]
+    G -.->|GiST Constraint EXCLUDE| H[Prevent Overlap at DB Level]
 ```
 
-### ⚡ Hybrid Data Fallback Mechanism
-The React frontend is built to be resilient. When communicating with the backend:
-1. It attempts to fetch and mutate data via the backend REST endpoints.
-2. If the backend server is unreachable or offline, the client **gracefully falls back to a Mock LocalStorage database** (utilizing seed data defined in [venuesData.ts](file:///d:/1/BookMyVenue%20test2/src/data/venuesData.ts)). This enables seamless demoing, testing, and offline presentation.
+### 🔒 Double-Booking Protection Logic
+The system enforces strict conflict guards during transaction attempts:
+1. **Operating Hour Enforcement**: For hourly listings, reservations must fall strictly within the venue's set `opening_time` and `closing_time`.
+2. **Buffer/Cleaning Gaps**: Hosts can configure a buffer (e.g. 2-hour cleaning gaps) for hourly venues. Bookings are automatically padded with this gap to prevent back-to-back overlaps.
+3. **Database-Level Guard**: The PostgreSQL table utilizes `btree_gist` and a `tsrange` exclusion constraint to prevent overlapping active blocks at the database engine level, guaranteeing data integrity.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Frontend** | React (v18.3) | Reactive components and dashboard interfaces |
+| **Routing** | React Router (v7.1) | Declarative single-page routing and role-based guards |
+| **Styling** | Tailwind CSS (v3.4) + Radix UI | Sleek glassmorphic design variables and responsive styling |
+| **Animations** | Framer Motion (v12.4) | Micro-interactions, hover effects, and slide-in transition animations |
+| **Maps** | MapLibre GL (v5.24) | Geolocation searches and map picking using OpenStreetMap tiles |
+| **Backend** | Node.js + Express.js | Core API router and business validation layer |
+| **Database** | PostgreSQL (v8.11 client) | Relational storage utilizing GIST exclusion indexes |
+| **Auth** | JSON Web Tokens (JWT) + bcryptjs | Token-based security and password hashing |
+| **Uploads** | Multer | local disk-based image storage |
 
 ---
 
 ## 🗄️ Database Schema
 
-Run the following SQL DDL statements on your PostgreSQL database to initialize the tables:
+The database relies on three core tables. Run the definitions below or execute the automated setup script described in the [Getting Started](#-getting-started) section:
 
 ```sql
+-- Enable btree_gist extension for GiST exclusion constraints on scalar types
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
 -- 1. Create Users Table
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL CHECK (role IN ('user', 'venue_owner', 'admin')),
+    role VARCHAR(50) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'venue_owner', 'admin')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -98,13 +139,15 @@ CREATE TABLE venues (
     title VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
     location VARCHAR(255) NOT NULL,
-    full_address VARCHAR(255) NOT NULL,
-    capacity INTEGER NOT NULL,
-    square_feet INTEGER NOT NULL,
-    price_per_night NUMERIC(10, 2) NOT NULL,
-    host_email VARCHAR(255) REFERENCES users(email) ON DELETE CASCADE,
+    full_address TEXT NOT NULL,
+    latitude NUMERIC(9, 6),
+    longitude NUMERIC(9, 6),
+    capacity INTEGER NOT NULL CHECK (capacity > 0),
+    square_feet INTEGER NOT NULL CHECK (square_feet > 0),
+    price_per_night NUMERIC(10, 2) NOT NULL CHECK (price_per_night >= 0),
+    host_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     host_type VARCHAR(100) DEFAULT 'Superhost',
-    rating NUMERIC(3, 2) DEFAULT 5.0,
+    rating NUMERIC(3, 2) DEFAULT 5.0 CHECK (rating >= 0 AND rating <= 5),
     is_top_rated BOOLEAN DEFAULT FALSE,
     date_range VARCHAR(100) DEFAULT 'Available',
     parking TEXT,
@@ -116,123 +159,322 @@ CREATE TABLE venues (
     status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'declined')),
     rejection_reason TEXT,
     booking_type VARCHAR(50) DEFAULT 'days' CHECK (booking_type IN ('days', 'hours')),
-    cleaning_gap INTEGER DEFAULT 0,
+    cleaning_gap INTEGER DEFAULT 0 CHECK (cleaning_gap >= 0),
     opening_time VARCHAR(5) DEFAULT '08:00',
     closing_time VARCHAR(5) DEFAULT '22:00',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Indexing for lookup speed optimization
+CREATE INDEX idx_venues_status ON venues(status);
+CREATE INDEX idx_venues_host_id ON venues(host_id);
+
 -- 3. Create Bookings Table
 CREATE TABLE bookings (
-    id VARCHAR(50) PRIMARY KEY, -- Generates BKG-XXXX, OFF-XXXX, etc.
+    id VARCHAR(50) PRIMARY KEY,
     venue_id INTEGER REFERENCES venues(id) ON DELETE CASCADE,
-    user_email VARCHAR(255) REFERENCES users(email) ON DELETE SET NULL, -- Null for offline locks
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL, -- Null for host offline locks
     start_date TIMESTAMP NOT NULL,
     end_date TIMESTAMP NOT NULL,
-    guests INTEGER DEFAULT 0,
-    total_price NUMERIC(10, 2) DEFAULT 0.00,
+    blocked_end_date TIMESTAMP NOT NULL, -- end_date + cleaning_gap (or end_date if daily)
+    cleaning_gap INTEGER DEFAULT 0 CHECK (cleaning_gap >= 0),
+    guests INTEGER DEFAULT 0 CHECK (guests >= 0),
+    total_price NUMERIC(10, 2) DEFAULT 0.00 CHECK (total_price >= 0),
     status VARCHAR(50) DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'cancelled', 'offline')),
     payment_status VARCHAR(50) DEFAULT 'paid' CHECK (payment_status IN ('paid', 'refunded', 'offline')),
+    booking_date DATE DEFAULT CURRENT_DATE,
     check_in_instructions TEXT,
     renter_name VARCHAR(255),
     renter_phone VARCHAR(50),
     renter_email VARCHAR(255),
-    booking_type VARCHAR(50) DEFAULT 'days',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    booking_type VARCHAR(50) DEFAULT 'days' CHECK (booking_type IN ('days', 'hours')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_booking_dates CHECK (end_date >= start_date),
+    CONSTRAINT chk_blocked_end CHECK (blocked_end_date >= end_date),
+    CONSTRAINT no_overlapping_bookings EXCLUDE USING gist (
+        venue_id WITH =,
+        tsrange(start_date, blocked_end_date, '[)') WITH &&
+    ) WHERE (status != 'cancelled')
 );
+
+CREATE INDEX idx_bookings_venue_dates ON bookings(venue_id, start_date, end_date) WHERE status != 'cancelled';
+CREATE INDEX idx_bookings_user_id ON bookings(user_id);
 ```
 
 ---
 
-## 🔌 API Endpoints Reference
+## 📂 Folder Structure
 
-### Authentication (`/api/auth`)
-* `POST /signup` - Register a new user (`user` or `venue_owner`).
-* `POST /login` - Log in and obtain a Bearer JWT token.
-
-### Venue Operations (`/api/venues`)
-* `GET /` - Fetch all approved venues.
-* `GET /:id` - Retrieve details of a specific venue.
-* `POST /` *(Host only)* - Submit a new venue for admin verification.
-* `PUT /:id` *(Host only)* - Update venue details (resets status to `pending`).
-* `DELETE /:id` *(Host only)* - Delete a venue listing.
-* `GET /my-venues` *(Host only)* - Retrieve all listings owned by the logged-in host.
-
-### Booking Operations (`/api/bookings`)
-* `GET /` - Fetch bookings (returns renter reservations for users; host listings reservations for owners).
-* `POST /` - Request a new online venue booking (applies conflict checking).
-* `POST /lock` *(Host only)* - Schedule an offline block or maintenance period.
-* `PUT /cancel/:id` - Cancel an active booking and flag payment as refunded.
-* `GET /venue/:id` - Get non-cancelled reservation date-ranges for a particular venue calendar.
-
-### Media Upload (`/api/upload`)
-* `POST /` - Single image uploader. Saves images locally to `backend/uploads/` and returns the file access URL.
-
-### Admin Operations (`/api/admin` - Admin Only)
-* `GET /stats` - Access core platform business statistics and profit percentages.
-* `GET /venues` - List all venues regardless of approval status.
-* `PUT /venues/:id/status` - Approve or decline a pending venue listing.
-* `GET /bookings` - Get all bookings made on the platform.
-* `GET /users` - Get all registered users.
+```
+├── backend/
+│   ├── controllers/         # Express handler logic (auth, venues, bookings, admin)
+│   ├── middleware/          # JWT authorization and validation middleware
+│   ├── routes/              # Express API endpoints
+│   ├── uploads/             # Locally uploaded files (gitignored)
+│   ├── db.js                # pg Connection Pool initialization
+│   ├── reset-db.js          # Database rebuild and seed utility
+│   ├── schema.sql           # Database schema tables and constraints
+│   ├── server.js            # Node backend entry point
+│   ├── .env.example         # Template for environment variables
+│   └── package.json         # Backend node packages and scripts
+├── src/
+│   ├── assets/              # Media and logo assets
+│   ├── components/
+│   │   ├── map/             # MapLibre wrapper components (LocationPicker, VenueMap, etc.)
+│   │   ├── ui/              # Radix UI and visual design atoms (badge, button, cards)
+│   │   └── Navbar.tsx       # Universal application navigation header
+│   ├── data/
+│   │   └── venuesData.ts    # Seed data fallback config
+│   ├── page/                # React router screen pages
+│   ├── index.css            # Stylesheets with Tailwind and design tokens
+│   ├── App.tsx              # React router structure and authentication route wrappers
+│   └── main.tsx             # Frontend bootstrap file
+├── components.json          # Shadcn/ui CLI configuration
+├── index.html               # Main entry HTML document
+├── package.json             # Root workspace packages and build configurations
+├── tailwind.config.js       # Custom design spacing configurations
+├── vite.config.ts           # Vite application packaging setup
+└── tsconfig.json            # Base typescript configurations
+```
 
 ---
 
-## 🚀 Getting Started & Installation
+## 🚀 Getting Started
 
 ### Prerequisites
-* **Node.js** (v18 or higher recommended)
-* **PostgreSQL** database instance
-* **NPM** or **Yarn**
+* **Node.js** (v18.x or newer)
+* **PostgreSQL** database instance (v12+ recommended for GiST exclusion constraints)
+* **NPM** (packaged with Node)
 
-### 1. Database Setup
-1. Create a new database in PostgreSQL (e.g. `bookmyvenue`).
-2. Run the SQL statements provided in the [Database Schema](#-database-schema) section to configure the tables.
+---
 
-### 2. Backend Setup
-1. Navigate to the backend directory:
+### 1. Database Setup & Seeding
+
+1. Open your PostgreSQL query tool and create a new database:
+   ```sql
+   CREATE DATABASE bookmyvenue;
+   ```
+2. Navigate into the backend subdirectory:
    ```bash
    cd backend
    ```
-2. Install backend dependencies:
+3. Copy `.env.example` to `.env`:
    ```bash
-   npm install
+   cp .env.example .env
    ```
-3. Create a `.env` file in the `backend/` folder based on `.env.example`:
+4. Edit the new `.env` file with your PostgreSQL password and username:
    ```env
    PORT=5000
-   DATABASE_URL=postgresql://your_db_username:your_db_password@localhost:5432/bookmyvenue
+   DATABASE_URL=postgresql://your_postgres_username:your_postgres_password@localhost:5432/bookmyvenue
    JWT_SECRET=your_super_secret_key_here
    NODE_ENV=development
    ```
-4. Start the server in development mode (using Nodemon):
+5. Install backend dependencies:
    ```bash
-   npm run dev
+   npm install
+   ```
+6. Run the reset and seeding script. This drops any conflicting tables, compiles the SQL schemas, and sets up test users:
+   ```bash
+   node reset-db.js
    ```
 
-### 3. Frontend Setup
-1. Open a new terminal in the project root directory.
+#### 🔑 Seeded Test Accounts
+The seeding script generates three preconfigured accounts representing each system role:
+
+| Role | Username / Email | Password |
+| :--- | :--- | :--- |
+| **Administrator** | `admin@gmail.com` | `test123` |
+| **Venue Host** | `owner@gmail.com` | `test123` |
+| **Standard User (Renter)** | `user@gmail.com` | `test123` |
+
+---
+
+### 2. Running Backend Locally
+
+Run the development server in watch mode:
+```bash
+npm run dev
+```
+The server will boot and listen at `http://localhost:5000`. You should see the following console confirmation:
+```
+BookMyVenue backend server listening on port 5000
+API URL: http://localhost:5000/api
+```
+
+---
+
+### 3. Running Frontend Locally
+
+1. Open a new terminal session in the **root project directory**.
 2. Install frontend dependencies:
    ```bash
    npm install
    ```
-3. Start the Vite React client:
+3. Boot up the Vite developer build server:
    ```bash
    npm run dev
    ```
-4. Open the browser and visit `http://localhost:5173`.
+4. Open your browser and navigate to `http://localhost:5173`.
+
+> [!NOTE]
+> The frontend is configured to call `http://localhost:5000/api` directly. If the backend is not running, the application will display fallback mock venue cards so you can test user flows offline.
 
 ---
 
-## 🔒 Booking Rules & Conflict Validation
+## 🔌 API Reference
 
-To ensure absolute operational accuracy and protect both hosts and guests, the system enforces the following safety filters during booking attempts:
+All requests must be prefixed with `/api`. Authenticated requests require the Header `Authorization: Bearer <your_jwt_token>`.
 
-### 1. Booking Horizon Restraints
-* **30-Day Window Limit**: Web bookings are restricted to date ranges within 30 days of the current calendar date. If a user tries to book past the 30-day window, the system blocks the request and prompts them to coordinate offline with the host.
+<details>
+<summary>🔐 Click to Expand API Endpoints Reference</summary>
 
-### 2. Double-Booking Prevention
-* **Schedule Overlap Verification**: Before a booking or offline lock is created, the server runs checks comparing the proposed range `[start_date, end_date]` against all non-cancelled bookings.
-* **Cleaning Gaps**: For **hourly bookings**, hosts can configure a buffer (e.g., 2 hours). When calculating conflicts, the backend dynamically pads bookings with this cleaning buffer to prevent subsequent guests from checking in before clean-up.
+### Authentication (`/api/auth`)
+* `POST /signup`
+  * **Description**: Create a new account.
+  * **Payload**: `{ "name": "...", "email": "...", "password": "...", "role": "user" \| "venue_owner" }`
+  * **Auth Required**: None
+* `POST /login`
+  * **Description**: Authenticate credentials and get authorization token.
+  * **Payload**: `{ "email": "...", "password": "..." }`
+  * **Auth Required**: None
 
-### 3. Operating Hour Enforcement
-* For **hourly bookings**, checkout and check-in times must fall strictly between the venue's designated `opening_time` and `closing_time`.
+### Venue Operations (`/api/venues`)
+* `GET /`
+  * **Description**: Fetch all approved venues.
+  * **Auth Required**: None
+* `GET /my-venues`
+  * **Description**: Fetch venues registered under the authenticated host account.
+  * **Auth Required**: Yes (`venue_owner`)
+* `GET /:id`
+  * **Description**: Retrieve deep specifications for a specific venue listing.
+  * **Auth Required**: None
+* `GET /:id/bookings`
+  * **Description**: Retrieve active bookings associated with a specific venue.
+  * **Auth Required**: None
+* `GET /:id/availability`
+  * **Description**: Retrieve booked schedules (or timeline slots if hourly) for a venue. Optional query `?date=YYYY-MM-DD`.
+  * **Auth Required**: None
+* `POST /`
+  * **Description**: Submit a new venue for administrator validation.
+  * **Auth Required**: Yes (`venue_owner`)
+* `PUT /:id`
+  * **Description**: Update an owned venue's details (resets verification status to `pending`).
+  * **Auth Required**: Yes (`venue_owner`)
+* `DELETE /:id`
+  * **Description**: Remove a venue registration.
+  * **Auth Required**: Yes (`venue_owner`)
+
+### Booking Operations (`/api/bookings`)
+* `GET /`
+  * **Description**: Fetch user reservations (renters see their bookings; hosts see their venues' reservations).
+  * **Auth Required**: Yes
+* `GET /:id`
+  * **Description**: Get details for a specific booking transaction.
+  * **Auth Required**: Yes (Renter, Venue Host, or Admin)
+* `POST /`
+  * **Description**: Create a new online reservation (validates overlaps and horizon limits).
+  * **Auth Required**: Yes
+* `POST /lock`
+  * **Description**: Schedule an offline maintenance block or private reservation.
+  * **Auth Required**: Yes (`venue_owner`)
+* `PUT /:id/cancel`
+  * **Description**: Mark a booking status as `cancelled` and issue payment refund logs.
+  * **Auth Required**: Yes
+
+### Media Upload (`/api/upload`)
+* `POST /`
+  * **Description**: Upload a single image file. Returns a public file access URL.
+  * **Payload**: Multipart form data with key `image`.
+  * **Auth Required**: None
+
+### Admin Auditing (`/api/admin`)
+* `GET /stats`
+  * **Description**: Fetch platform KPI variables (transaction volumes, payouts, counts).
+  * **Auth Required**: Yes (`admin`)
+* `GET /venues`
+  * **Description**: List all database venue listings regardless of validation state.
+  * **Auth Required**: Yes (`admin`)
+* `PUT /venues/:id/status`
+  * **Description**: Approve or reject a listing request.
+  * **Payload**: `{ "status": "approved" \| "declined", "rejectionReason": "..." }`
+  * **Auth Required**: Yes (`admin`)
+* `GET /bookings`
+  * **Description**: Review all bookings recorded in the system.
+  * **Auth Required**: Yes (`admin`)
+* `GET /users`
+  * **Description**: Retrieve a registry of all system users.
+  * **Auth Required**: Yes (`admin`)
+
+</details>
+
+---
+
+## 💡 Usage Examples
+
+### 1. User Sign In
+To fetch a bearer token for a user:
+```bash
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@gmail.com", "password": "test123"}'
+```
+
+### 2. Fetch Venues
+Retrieve the catalog of approved event locations:
+```bash
+curl -X GET http://localhost:5000/api/venues
+```
+
+### 3. Create a Booking
+Book a venue by passing dates, total price, guest count, and renter contact details (requires authentication token):
+```bash
+curl -X POST http://localhost:5000/api/bookings \
+  -H "Authorization: Bearer <your_jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "venueId": 1,
+    "startDate": "2026-07-15T14:00:00",
+    "endDate": "2026-07-16T11:00:00",
+    "guests": 2,
+    "totalPrice": 250.00,
+    "renterName": "John Doe",
+    "renterPhone": "+1234567890",
+    "renterEmail": "user@gmail.com"
+  }'
+```
+
+---
+
+## 🗺️ Roadmap
+
+- [x] Multi-role dashboard structures (User, Host, Admin)
+- [x] Day-based (daily check-in/out) and Hour-based booking schedules
+- [x] Cleaning buffers and customizable operating hours
+- [x] MapLibre GL interactive maps and location selectors
+- [x] Database-level double-booking protection using PostgreSQL GIST constraints
+- [ ] Real-time Socket.io chat messaging between renters and venue owners
+- [ ] Direct checkout payments via Stripe integration
+- [ ] Venue rating feedback loops and user reviews
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This repository is proprietary. No formal license is included. All rights reserved.
+
+---
+
+## ✉️ Contact
+
+* **Project Repository**: [BookMyVenue](https://github.com/karthikajay04/BookMyVenue) (<!-- VERIFY -->)
+* **Demo Enquiries**: admin@gmail.com
