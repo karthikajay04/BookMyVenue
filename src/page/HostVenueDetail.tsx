@@ -11,9 +11,9 @@ import Navbar from '../components/Navbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { getVenues, updateVenueInLocalStorage } from '../data/venuesData';
 import type { Venue } from '../data/venuesData';
 import InteractiveCalendar from '@/components/ui/visualize-booking';
+import { VenueMap, LocationPicker } from '@/components/map';
 
 const PRESET_AMENITIES = [
   'High-speed Wi-Fi',
@@ -59,6 +59,8 @@ export default function HostVenueDetail() {
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
   const [fullAddress, setFullAddress] = useState('');
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [capacity, setCapacity] = useState<number>(0);
   const [squareFeet, setSquareFeet] = useState<number>(0);
   const [pricePerNight, setPricePerNight] = useState<number>(0);
@@ -85,6 +87,9 @@ export default function HostVenueDetail() {
   const [newRule, setNewRule] = useState('');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const availableEventTypes = Array.from(new Set([...PRESET_EVENT_TYPES, ...selectedEventTypes]));
+  const availableAmenities = Array.from(new Set([...PRESET_AMENITIES, ...selectedAmenities]));
 
   const triggerToast = (text: string, type: 'success' | 'error') => {
     setToastMessage({ text, type });
@@ -125,9 +130,6 @@ export default function HostVenueDetail() {
       let venueData: Venue | null = null;
       if (response.ok) {
         venueData = await response.json();
-      } else {
-        const local = getVenues();
-        venueData = local.find(v => v.id === id) || null;
       }
 
       if (venueData) {
@@ -135,24 +137,15 @@ export default function HostVenueDetail() {
         populateForm(venueData);
       }
 
-      // Fetch bookings
       const bookingsResponse = await fetch(`http://localhost:5000/api/venues/${id}/bookings`);
       if (bookingsResponse.ok) {
         const bookingsData = await bookingsResponse.json();
-        // Convert dates if needed and set
         setBookings(bookingsData);
       } else {
-        // Mock bookings for fallback
         setBookings([]);
       }
     } catch (err) {
       console.error('Error fetching venue details:', err);
-      const local = getVenues();
-      const venueData = local.find(v => v.id === id) || null;
-      if (venueData) {
-        setVenue(venueData);
-        populateForm(venueData);
-      }
     } finally {
       setIsLoading(false);
     }
@@ -179,6 +172,8 @@ export default function HostVenueDetail() {
     setDescription(v.description);
     setLocation(v.location);
     setFullAddress(v.fullAddress || '');
+    setLatitude(v.latitude !== undefined && v.latitude !== null ? v.latitude : null);
+    setLongitude(v.longitude !== undefined && v.longitude !== null ? v.longitude : null);
     setCapacity(v.capacity);
     setSquareFeet(v.squareFeet || 0);
     setPricePerNight(v.pricePerNight);
@@ -329,6 +324,8 @@ export default function HostVenueDetail() {
       description,
       location,
       fullAddress,
+      latitude,
+      longitude,
       capacity: Number(capacity),
       squareFeet: Number(squareFeet),
       pricePerNight: Number(pricePerNight),
@@ -360,6 +357,8 @@ export default function HostVenueDetail() {
           description,
           location,
           full_address: fullAddress,
+          latitude,
+          longitude,
           capacity: Number(capacity),
           square_feet: Number(squareFeet),
           price_per_night: Number(pricePerNight),
@@ -379,23 +378,18 @@ export default function HostVenueDetail() {
       });
 
       if (response.ok) {
+        const resData = await response.json();
+        setVenue(resData.venue || { ...venue!, ...updatedPayload });
         triggerToast('Venue updated successfully!', 'success');
+        setSearchParams({});
+        setIsEditing(false);
       } else {
-        updateVenueInLocalStorage(id, updatedPayload);
-        triggerToast('Venue updated locally!', 'success');
+        const errorData = await response.json();
+        triggerToast(errorData.message || 'Failed to update venue.', 'error');
       }
-
-      // Update local state and exit edit mode
-      setVenue({ ...venue!, ...updatedPayload });
-      setSearchParams({});
-      setIsEditing(false);
     } catch (err) {
       console.error('Failed to update venue:', err);
-      updateVenueInLocalStorage(id, updatedPayload);
-      triggerToast('Venue updated locally!', 'success');
-      setVenue({ ...venue!, ...updatedPayload });
-      setSearchParams({});
-      setIsEditing(false);
+      triggerToast('Failed to update venue.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -490,17 +484,15 @@ export default function HostVenueDetail() {
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
               <div className="w-full">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <Badge className="bg-[#c5a059]/10 text-[#c5a059] border border-[#c5a059]/20">Host Dashboard</Badge>
-                  {venue.isTopRated && <Badge className="bg-[#c5a059] text-black font-bold uppercase tracking-widest text-[9px]">Luxury</Badge>}
-                  
+
                   {/* Status Badge */}
                   <span className={cn(
                     "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border",
                     venue.status === "approved"
                       ? "bg-green-500/10 text-green-400 border-green-500/20"
                       : venue.status === "declined"
-                      ? "bg-red-500/10 text-red-400 border-red-500/20"
-                      : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                        ? "bg-red-500/10 text-red-400 border-red-500/20"
+                        : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
                   )}>
                     <span className={cn(
                       "w-1.5 h-1.5 rounded-full",
@@ -641,9 +633,15 @@ export default function HostVenueDetail() {
                     <div className="space-y-4 pt-1">
                       <div>
                         <h4 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">Street Address</h4>
-                        <p className="text-sm text-white/90 bg-white/[0.02] border border-white/5 rounded-2xl p-4 font-light leading-relaxed">
+                        <p className="text-sm text-white/90 bg-white/[0.02] border border-white/5 rounded-2xl p-4 font-light leading-relaxed mb-4">
                           {venue.fullAddress}
                         </p>
+                        <VenueMap
+                          latitude={venue.latitude}
+                          longitude={venue.longitude}
+                          venueName={venue.title}
+                          address={venue.fullAddress}
+                        />
                       </div>
                       <div>
                         <h4 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-2 flex items-center gap-1.5">
@@ -849,7 +847,7 @@ export default function HostVenueDetail() {
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Perfect For (Event Categories)</label>
                       <div className="flex flex-wrap gap-2 pt-0.5">
-                        {PRESET_EVENT_TYPES.map((type) => {
+                        {availableEventTypes.map((type) => {
                           const isSelected = selectedEventTypes.includes(type);
                           return (
                             <button
@@ -890,7 +888,7 @@ export default function HostVenueDetail() {
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Amenities Checklist *</label>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {PRESET_AMENITIES.map((item) => {
+                        {availableAmenities.map((item) => {
                           const isSelected = selectedAmenities.includes(item);
                           return (
                             <button
@@ -954,6 +952,57 @@ export default function HostVenueDetail() {
                         )}
                       />
                     </div>
+
+                    <div className="pt-2 pb-4">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block mb-2">Pin Location on Map</label>
+                      <LocationPicker
+                        value={latitude && longitude ? { latitude, longitude } : null}
+                        onChange={(coords) => {
+                          setLatitude(coords.latitude);
+                          setLongitude(coords.longitude);
+                        }}
+                        onAddressPicked={(addressInfo) => {
+                          setFullAddress(addressInfo.formattedAddress);
+                          if (addressInfo.city) {
+                            setLocation(addressInfo.city);
+                          }
+                          setErrors(prev => ({ ...prev, fullAddress: '', location: '' }));
+                        }}
+                      />
+
+                      {/* Manual Coordinates Override */}
+                      <div className="flex flex-col sm:flex-row gap-4 w-full mt-3">
+                        <div className="flex-1 space-y-1">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Latitude (Manual Override)</label>
+                          <input
+                            type="number"
+                            step="any"
+                            placeholder="e.g. 11.8745"
+                            value={latitude === null || latitude === undefined ? '' : latitude}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? null : Number(e.target.value);
+                              setLatitude(val);
+                            }}
+                            className="w-full px-4 py-2.5 bg-white/[0.02] border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-[#c5a059]/40"
+                          />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Longitude (Manual Override)</label>
+                          <input
+                            type="number"
+                            step="any"
+                            placeholder="e.g. 75.3704"
+                            value={longitude === null || longitude === undefined ? '' : longitude}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? null : Number(e.target.value);
+                              setLongitude(val);
+                            }}
+                            className="w-full px-4 py-2.5 bg-white/[0.02] border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-[#c5a059]/40"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Parking Accommodations</label>
                       <textarea

@@ -35,7 +35,9 @@ export const getBookings = async (req, res) => {
           v.cleaning_gap AS "venueCleaningGap",
           v.opening_time AS "venueOpeningTime",
           v.closing_time AS "venueClosingTime",
-          b.booking_type AS "bookingType"
+          b.booking_type AS "bookingType",
+          b.refund_amount AS "refundAmount",
+          b.refund_percentage AS "refundPercentage"
         FROM bookings b
         JOIN venues v ON b.venue_id = v.id
         JOIN users h ON v.host_id = h.id
@@ -72,7 +74,9 @@ export const getBookings = async (req, res) => {
           v.cleaning_gap AS "venueCleaningGap",
           v.opening_time AS "venueOpeningTime",
           v.closing_time AS "venueClosingTime",
-          b.booking_type AS "bookingType"
+          b.booking_type AS "bookingType",
+          b.refund_amount AS "refundAmount",
+          b.refund_percentage AS "refundPercentage"
         FROM bookings b
         JOIN venues v ON b.venue_id = v.id
         JOIN users h ON v.host_id = h.id
@@ -262,17 +266,83 @@ export const cancelBooking = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to cancel this booking' });
     }
 
+    if (booking.status === 'cancelled') {
+      return res.status(400).json({ message: 'Booking is already cancelled' });
+    }
+
+    const today = new Date();
+    const startDate = new Date(booking.start_date);
+
+    if (startDate < today) {
+      return res.status(400).json({ message: 'Cannot cancel a booking that has already started' });
+    }
+
+    // Calculate remaining time until start_date
+    const diffTime = startDate.getTime() - today.getTime();
+    const daysRemaining = diffTime / (1000 * 60 * 60 * 24);
+
+    let refundPercentage = 0;
+    let refundAmount = 0.00;
+    let paymentStatus = booking.payment_status;
+
+    if (booking.status === 'offline' || booking.payment_status === 'offline') {
+      refundPercentage = 0;
+      refundAmount = 0.00;
+      paymentStatus = 'offline';
+    } else {
+      if (booking.booking_type === 'hours') {
+        const hoursRemaining = diffTime / (1000 * 60 * 60);
+        if (hoursRemaining >= 36) {
+          refundPercentage = 100;
+          refundAmount = Number(booking.total_price);
+          paymentStatus = 'refunded';
+        } else if (hoursRemaining >= 24) {
+          refundPercentage = 50;
+          refundAmount = Number(booking.total_price) * 0.5;
+          paymentStatus = 'refunded';
+        } else if (hoursRemaining >= 6) {
+          refundPercentage = 10;
+          refundAmount = Number(booking.total_price) * 0.10;
+          paymentStatus = 'refunded';
+        } else {
+          refundPercentage = 0;
+          refundAmount = 0.00;
+          paymentStatus = 'paid';
+        }
+      } else {
+        if (daysRemaining >= 10) {
+          refundPercentage = 100;
+          refundAmount = Number(booking.total_price);
+          paymentStatus = 'refunded';
+        } else if (daysRemaining >= 3) {
+          refundPercentage = 50;
+          refundAmount = Number(booking.total_price) * 0.5;
+          paymentStatus = 'refunded';
+        } else {
+          refundPercentage = 0;
+          refundAmount = 0.00;
+          paymentStatus = 'paid';
+        }
+      }
+    }
+
     // Update status to cancelled and refund payment
     const result = await query(`
       UPDATE bookings 
-      SET status = 'cancelled', payment_status = 'refunded' 
+      SET 
+        status = 'cancelled', 
+        payment_status = $2,
+        refund_amount = $3,
+        refund_percentage = $4
       WHERE id = $1 
       RETURNING *
-    `, [id]);
+    `, [id, paymentStatus, refundAmount, refundPercentage]);
 
     res.json({
       success: true,
-      booking: result.rows[0]
+      booking: result.rows[0],
+      refundAmount,
+      refundPercentage
     });
   } catch (error) {
     console.error('Error cancelling booking:', error);
@@ -593,7 +663,9 @@ export const getBookingById = async (req, res) => {
         v.closing_time AS "venueClosingTime",
         b.booking_type AS "bookingType",
         b.user_id AS "userId",
-        v.host_id AS "hostId"
+        v.host_id AS "hostId",
+        b.refund_amount AS "refundAmount",
+        b.refund_percentage AS "refundPercentage"
       FROM bookings b
       JOIN venues v ON b.venue_id = v.id
       JOIN users h ON v.host_id = h.id

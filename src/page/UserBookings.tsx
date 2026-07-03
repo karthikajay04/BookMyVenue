@@ -1,27 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Calendar,
-  MapPin,
   Users,
   CheckCircle2,
-  Clock,
   XCircle,
-  ArrowRight,
   Info,
   Star,
   Trash2,
-  Phone,
-  Mail,
-  Sparkles,
   ChevronLeft,
   ChevronRight,
-  CreditCard
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
-// ============================================================================
-// --- TYPES & INTERFACES ---
-// ============================================================================
+
+
 
 export interface Booking {
   id: string;
@@ -41,6 +34,11 @@ export interface Booking {
   hostMail: string;
   checkInInstructions: string;
   bookingType?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  fullAddress?: string;
+  refundAmount?: number;
+  refundPercentage?: number;
 }
 
 export interface PlaceCardProps {
@@ -60,17 +58,11 @@ export interface PlaceCardProps {
 }
 
 
-// ============================================================================
-// --- FILE: src/components/ui/PlaceCard.tsx ---
-// ============================================================================
 export function PlaceCard({
   images = [],
-  tags = [],
-  rating = 4.8,
+
   title,
   dateRange,
-  hostType = "Verified Elite Host",
-  isTopRated = false,
   description,
   capacity,
   className = "",
@@ -93,14 +85,14 @@ export function PlaceCard({
   return (
     <div
       onClick={onClick}
-      className={`group relative rounded-3xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-md shadow-2xl transition-all duration-500 hover:border-[#c5a059]/40 cursor-pointer ${className}`}
+      className={`group relative rounded-3xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-md shadow-2xl transition-all duration-500 ${onClick ? 'hover:border-[#c5a059]/40 cursor-pointer' : ''} ${className}`}
     >
       {/* Visual media gallery wrapper */}
       <div className="relative h-64 overflow-hidden">
         <img
           src={images[activeImgIndex]}
           alt={title}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          className={`w-full h-full object-cover transition-transform duration-700 ${onClick ? 'group-hover:scale-105' : ''}`}
           onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
             e.currentTarget.src = "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600";
           }}
@@ -135,16 +127,11 @@ export function PlaceCard({
       {/* Details Container */}
       <div className="p-6">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] text-white/40 uppercase tracking-widest font-mono font-bold">
-            {hostType}
-          </span>
-          <div className="flex items-center gap-1">
-            <Star className="w-3.5 h-3.5 text-[#c5a059] fill-[#c5a059]" />
-            <span className="text-xs font-semibold text-white">{rating}</span>
-          </div>
+
+
         </div>
 
-        <h3 className="text-lg sm:text-xl font-semibold text-white tracking-tight group-hover:text-[#c5a059] transition-colors mb-2">
+        <h3 className={`text-lg sm:text-xl font-semibold text-white tracking-tight ${onClick ? 'group-hover:text-[#c5a059]' : ''} transition-colors mb-2`}>
           {title}
         </h3>
 
@@ -167,94 +154,14 @@ export function PlaceCard({
   );
 }
 
-// ============================================================================
-// --- DATA: Initial Bookings ---
-// ============================================================================
-const initialBookings: Booking[] = [
-  {
-    id: "BKG-8402",
-    venueId: "1",
-    venueTitle: "The Grand Pavilion",
-    venueLocation: "Beverly Hills, CA",
-    venueImage: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=1200",
-    startDate: "2026-06-18",
-    endDate: "2026-06-20",
-    guests: 85,
-    totalPrice: 4200,
-    status: "upcoming",
-    bookingDate: "2026-05-15",
-    paymentStatus: "paid",
-    hostName: "Eleanor Vance",
-    hostPhone: "+1 (555) 234-5678",
-    hostMail: "vance@grandpavilion.com",
-    checkInInstructions: "Check-in begins at 2:00 PM. Access details will be sent directly by host Eleanor Vance."
-  },
-  {
-    id: "BKG-3109",
-    venueId: "3",
-    venueTitle: "Mirage Desert Oasis",
-    venueLocation: "Palm Springs, CA",
-    venueImage: "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&q=80&w=1200",
-    startDate: "2026-07-04",
-    endDate: "2026-07-05",
-    guests: 8,
-    totalPrice: 1850,
-    status: "upcoming",
-    bookingDate: "2026-05-20",
-    paymentStatus: "paid",
-    hostName: "Julian Sands",
-    hostPhone: "+1 (555) 987-6543",
-    hostMail: "reservations@miragedesert.com",
-    checkInInstructions: "Gate code is #2026. Follow the sand path to the main villa. Private host will meet you on-site."
-  },
-  {
-    id: "BKG-7721",
-    venueId: "2",
-    venueTitle: "Aetheria Glass Chapel",
-    venueLocation: "Big Sur, CA",
-    venueImage: "https://images.unsplash.com/photo-1469371670807-013ccf25f16a?auto=format&fit=crop&q=80&w=1200",
-    startDate: "2026-04-12",
-    endDate: "2026-04-13",
-    guests: 45,
-    totalPrice: 3100,
-    status: "completed",
-    bookingDate: "2026-02-10",
-    paymentStatus: "paid",
-    hostName: "Clara Redwood",
-    hostPhone: "+1 (555) 456-7890",
-    hostMail: "events@aetheriachapel.org",
-    checkInInstructions: "Completed reservation. Thank you for booking with us."
-  },
-  {
-    id: "BKG-1102",
-    venueId: "4",
-    venueTitle: "The Obsidian Loft",
-    venueLocation: "Downtown Los Angeles, CA",
-    venueImage: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&q=80&w=1200",
-    startDate: "2026-01-15",
-    endDate: "2026-01-16",
-    guests: 120,
-    totalPrice: 5500,
-    status: "cancelled",
-    bookingDate: "2025-12-01",
-    paymentStatus: "refunded",
-    hostName: "Marcus Thorne",
-    hostPhone: "+1 (555) 111-2222",
-    hostMail: "marcus@obsidianloft.io",
-    checkInInstructions: "Booking cancelled and refunded."
-  }
-];
 
-// ============================================================================
-// --- FILE: src/pages/Bookings.tsx (Main Dashboard) ---
-// ============================================================================
 export default function Bookings(): React.JSX.Element {
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
   // Custom dialog state handlers
-  const [ticketModalBooking, setTicketModalBooking] = useState<Booking | null>(null);
   const [cancelTargetBooking, setCancelTargetBooking] = useState<Booking | null>(null);
   const [successToast, setSuccessToast] = useState<string>('');
 
@@ -317,26 +224,85 @@ export default function Bookings(): React.JSX.Element {
         }
       });
 
+      const data = await response.json();
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.message || 'Failed to cancel booking');
       }
 
       setBookings((prev) =>
         prev.map((b) =>
           b.id === cancelTargetBooking.id
-            ? { ...b, status: 'cancelled', paymentStatus: 'refunded' }
+            ? {
+              ...b,
+              status: 'cancelled',
+              paymentStatus: data.booking.payment_status,
+              refundAmount: data.refundAmount,
+              refundPercentage: data.refundPercentage
+            }
             : b
         )
       );
 
-      setSuccessToast(`Successfully cancelled booking ${cancelTargetBooking.id}. Refund process initiated.`);
+      const refundInfo = data.refundPercentage > 0
+        ? `Refund of ${formatPrice(data.refundAmount)} (${data.refundPercentage}%) initiated.`
+        : `Booking cancelled. Under policy terms, no refund was issued.`;
+      setSuccessToast(`Successfully cancelled booking ${cancelTargetBooking.id}. ${refundInfo}`);
     } catch (err: any) {
       console.error('Cancellation error:', err);
       alert(err.message || 'Failed to cancel booking. Please try again.');
     } finally {
       setCancelTargetBooking(null);
     }
+  };
+
+  const getRefundPreview = (booking: Booking) => {
+    const today = new Date();
+    const startDate = new Date(booking.startDate);
+    const diffTime = startDate.getTime() - today.getTime();
+
+    let pct = 0;
+    let amt = 0;
+    let description = '';
+
+    if (booking.bookingType === 'hours') {
+      const hoursRemaining = diffTime / (1000 * 60 * 60);
+
+      if (hoursRemaining >= 36) {
+        pct = 100;
+        amt = booking.totalPrice;
+        description = `You are cancelling ${Math.floor(hoursRemaining)} hours before the start time. You are eligible for a FULL refund.`;
+      } else if (hoursRemaining >= 24) {
+        pct = 50;
+        amt = booking.totalPrice * 0.5;
+        description = `You are cancelling ${Math.floor(hoursRemaining)} hours before the start time. You are eligible for a 50% partial refund.`;
+      } else if (hoursRemaining >= 6) {
+        pct = 10;
+        amt = booking.totalPrice * 0.1;
+        description = `You are cancelling ${Math.floor(hoursRemaining)} hours before the start time. You are eligible for a 10% partial refund.`;
+      } else {
+        pct = 0;
+        amt = 0;
+        description = `You are cancelling less than 6 hours before the start time. No refund will be issued.`;
+      }
+    } else {
+      const daysRemaining = diffTime / (1000 * 60 * 60 * 24);
+
+      if (daysRemaining >= 10) {
+        pct = 100;
+        amt = booking.totalPrice;
+        description = `You are cancelling ${Math.floor(daysRemaining)} days before the start date. You are eligible for a FULL refund.`;
+      } else if (daysRemaining >= 3) {
+        pct = 50;
+        amt = booking.totalPrice * 0.5;
+        description = `You are cancelling ${Math.floor(daysRemaining)} days before the start date. You are eligible for a 50% partial refund.`;
+      } else {
+        pct = 0;
+        amt = 0;
+        description = `You are cancelling less than 3 days before the start date. No refund will be issued.`;
+      }
+    }
+
+    return { pct, amt, description };
   };
 
   const formatPrice = (price: number): string => {
@@ -360,9 +326,9 @@ export default function Bookings(): React.JSX.Element {
     const s = new Date(start);
     const e = new Date(end);
     if (isNaN(s.getTime()) || isNaN(e.getTime())) return `${start} to ${end}`;
-    
+
     const dateOpt: Intl.DateTimeFormatOptions = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
-    
+
     if (bookingType === 'hours') {
       const timeOpt: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
       const dateStr = s.toLocaleDateString('en-US', dateOpt);
@@ -475,7 +441,7 @@ export default function Bookings(): React.JSX.Element {
               return (
                 <div
                   key={booking.id}
-                  className="bg-black/40 backdrop-blur-md border border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl transition-all duration-300 hover:border-[#c5a059]/20"
+                  className="bg-black/40 backdrop-blur-md border border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl transition-all duration-300"
                 >
                   {/* Embedded Native Card Component */}
                   <PlaceCard
@@ -484,7 +450,7 @@ export default function Bookings(): React.JSX.Element {
                       booking.status.toUpperCase(),
                       `${booking.guests} Guests Maximum`
                     ]}
-                    rating={4.9}
+
                     title={booking.venueTitle}
                     dateRange={formatBookingRange(booking.startDate, booking.endDate, booking.bookingType)}
                     hostType="Verified Elite Host"
@@ -513,9 +479,22 @@ export default function Bookings(): React.JSX.Element {
                           </span>
                         )}
                         {isCancelled && (
-                          <span className="text-red-400/80 flex items-center gap-1.5 font-medium">
-                            <XCircle className="w-3.5 h-3.5" /> Stay Cancelled & Refund Processed
-                          </span>
+                          <div className="flex flex-col gap-0.5 text-left">
+                            <span className="text-red-400/80 flex items-center gap-1.5 font-medium">
+                              <XCircle className="w-3.5 h-3.5" /> Stay Cancelled
+                            </span>
+                            {booking.refundPercentage !== undefined && (
+                              <span className="text-xs text-white/50">
+                                {booking.refundPercentage > 0 ? (
+                                  <>Refunded: <strong className="text-[#c5a059]">{formatPrice(booking.refundAmount || 0)}</strong> ({booking.refundPercentage}% refund)</>
+                                ) : (
+                                  <span className="text-white/40 font-medium">
+                                    No refund issued ({booking.bookingType === 'hours' ? 'cancelled less than 6 hours prior' : 'cancelled less than 3 days prior'})
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -534,10 +513,10 @@ export default function Bookings(): React.JSX.Element {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setTicketModalBooking(booking)}
+                            onClick={() => navigate(`/mybooking/${booking.id}`)}
                             className="flex items-center gap-2 px-6 py-2.5 text-xs font-semibold tracking-wider bg-[#c5a059] text-black hover:bg-[#ebd5a7] rounded-full shadow-lg transition-all duration-300 active:scale-[0.98]"
                           >
-                            <CreditCard className="w-3.5 h-3.5" /> Payment Details
+                            Details
                           </button>
                         </>
                       )}
@@ -546,7 +525,7 @@ export default function Bookings(): React.JSX.Element {
                       {isCompleted && (
                         <button
                           type="button"
-                          onClick={() => setTicketModalBooking(booking)}
+                          onClick={() => navigate(`/mybooking/${booking.id}`)}
                           className="px-5 py-2.5 text-xs font-semibold text-white/70 hover:text-white border border-white/10 hover:border-white/20 rounded-full transition-all"
                         >
                           Receipt
@@ -576,102 +555,6 @@ export default function Bookings(): React.JSX.Element {
 
       {/* ================= MODAL DIALOGS ================= */}
 
-      {/* 1. Payment Details Modal */}
-      {ticketModalBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-md" onClick={() => setTicketModalBooking(null)} />
-
-          {/* Modal Box */}
-          <div className="relative bg-[#0d0d11] border border-white/10 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#13131a]">
-              <div>
-                <span className="text-[10px] uppercase tracking-widest text-[#c5a059] font-mono">Invoice Summary</span>
-                <h4 className="text-lg font-semibold text-white mt-1">{ticketModalBooking.venueTitle}</h4>
-              </div>
-              <button
-                type="button"
-                onClick={() => setTicketModalBooking(null)}
-                className="text-white/40 hover:text-white transition-colors text-xl p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Receipt & Payments Breakdown Content */}
-            <div className="p-6 space-y-6">
-              {/* Payment Split Timeline Progress View */}
-              <div className="bg-zinc-900/60 border border-white/5 rounded-2xl p-5 space-y-4">
-
-
-                <div className="pt-3 border-t border-white/5 flex justify-between items-center text-sm">
-                  <span className="text-white/60 font-medium">Total Agreed Cost</span>
-                  <span className="text-base font-bold text-white">{formatPrice(ticketModalBooking.totalPrice)}</span>
-                </div>
-              </div>
-
-              {/* Booking Dates Breakdown */}
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between py-1 border-b border-white/5">
-                  <span className="text-white/50">Address Location</span>
-                  <span className="text-white font-medium">{ticketModalBooking.venueLocation}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-white/5">
-                  <span className="text-white/50">Booking Type</span>
-                  <span className="text-white font-medium capitalize">{ticketModalBooking.bookingType || 'days'}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-white/5">
-                  <span className="text-white/50">Schedule</span>
-                  <span className="text-white font-medium text-right">
-                    {formatBookingRange(ticketModalBooking.startDate, ticketModalBooking.endDate, ticketModalBooking.bookingType)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Host Contact Panel */}
-              <div className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-2">
-                <p className="text-xs text-[#c5a059] uppercase tracking-wider font-semibold mb-2">Host Contact Details</p>
-                <div className="text-sm font-semibold">{ticketModalBooking.hostName}</div>
-                <div className="flex flex-col gap-1 mt-1 text-xs text-white/60">
-                  <div className="flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-white/40" /> {ticketModalBooking.hostPhone}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5 text-white/40" /> {ticketModalBooking.hostMail}
-                  </div>
-                </div>
-                <div className="mt-3 pt-3 border-t border-white/5 text-xs text-white/50 leading-relaxed bg-[#0a0a0c]/20 p-2.5 rounded-lg">
-                  <strong>Access Policy: </strong> {ticketModalBooking.checkInInstructions}
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Actions */}
-            <div className="p-6 bg-[#13131a] border-t border-white/5 flex gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(ticketModalBooking.id);
-                  setSuccessToast("Booking verification key copied to clipboard!");
-                  setTicketModalBooking(null);
-                }}
-                className="flex-1 py-3 text-xs font-semibold tracking-wider text-center text-white bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/5"
-              >
-                Copy Reference ID
-              </button>
-              <button
-                type="button"
-                onClick={() => setTicketModalBooking(null)}
-                className="flex-1 py-3 text-xs font-semibold tracking-wider text-center text-black bg-[#c5a059] hover:bg-[#ebd5a7] rounded-full transition-colors"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 2. Cancel Confirmation Modal */}
       {cancelTargetBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -690,13 +573,32 @@ export default function Bookings(): React.JSX.Element {
               </div>
 
               {/* Cancellation Warning Terms */}
-              <div className="bg-[#1a1113] border border-red-500/10 rounded-2xl p-4 text-left text-xs text-red-200 space-y-1">
-                <p className="font-semibold text-red-400">Cancellation Policy & Terms:</p>
-                <ul className="list-disc pl-4 space-y-1 text-red-200/80">
-                  <li>Your 30% upfront deposit will be refunded to your original payment method in 3-5 business days.</li>
-                  <li>This cancellation cannot be undone. Host slots will release instantly.</li>
-                </ul>
-              </div>
+              {(() => {
+                const { pct, amt, description } = getRefundPreview(cancelTargetBooking);
+                return (
+                  <div className="bg-[#1a1113] border border-[#c5a059]/20 rounded-2xl p-4 text-left text-xs space-y-2">
+                    <p className="font-semibold text-[#c5a059]">Cancellation Policy & Refund Breakdown:</p>
+                    <p className="text-white/80">{description}</p>
+                    <div className="pt-2 border-t border-white/5 space-y-1 text-white/70">
+                      <div className="flex justify-between">
+                        <span>Original Price:</span>
+                        <span className="font-medium text-white">{formatPrice(cancelTargetBooking.totalPrice)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Refund Percentage:</span>
+                        <span className="font-semibold text-[#c5a059]">{pct}%</span>
+                      </div>
+                      <div className="flex justify-between text-sm pt-1 font-bold border-t border-white/5">
+                        <span>Est. Refund Amount:</span>
+                        <span className="text-[#c5a059]">{formatPrice(amt)}</span>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-white/40 pt-1">
+                      Note: Cancellations are final. Released dates will become instantly open to other users.
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="p-6 bg-[#13131a] border-t border-white/5 flex gap-3">

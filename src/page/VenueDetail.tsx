@@ -8,9 +8,9 @@ import {
 import Navbar from '../components/Navbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getVenues } from '../data/venuesData';
 import type { Venue } from '../data/venuesData';
 import { cn } from '@/lib/utils';
+import { VenueMap } from '@/components/map';
 
 export default function VenueDetail() {
   const { id } = useParams<{ id: string }>();
@@ -173,15 +173,11 @@ export default function VenueDetail() {
           const data = await response.json();
           setVenue(data);
         } else {
-          const localVenues = getVenues();
-          const localVenue = localVenues.find((v) => v.id === id);
-          setVenue(localVenue || null);
+          setVenue(null);
         }
       } catch (err) {
-        console.error('Failed to fetch venue details from backend, falling back:', err);
-        const localVenues = getVenues();
-        const localVenue = localVenues.find((v) => v.id === id);
-        setVenue(localVenue || null);
+        console.error('Failed to fetch venue details from backend:', err);
+        setVenue(null);
       } finally {
         setIsLoadingVenue(false);
       }
@@ -404,9 +400,15 @@ export default function VenueDetail() {
                 <div className="space-y-4 pt-1">
                   <div>
                     <h4 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">Street Address</h4>
-                    <p className="text-sm sm:text-base text-white/90 bg-white/[0.02] border border-white/5 rounded-2xl p-4 font-light leading-relaxed">
+                    <p className="text-sm sm:text-base text-white/90 bg-white/[0.02] border border-white/5 rounded-2xl p-4 font-light leading-relaxed mb-4">
                       {venue.fullAddress}
                     </p>
+                    <VenueMap
+                      latitude={venue.latitude}
+                      longitude={venue.longitude}
+                      venueName={venue.title}
+                      address={venue.fullAddress}
+                    />
                   </div>
 
                   <div>

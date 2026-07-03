@@ -9,7 +9,6 @@ import Navbar from '../components/Navbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { getVenues } from '../data/venuesData';
 import type { Venue } from '../data/venuesData';
 import InteractiveCalendar from '@/components/ui/visualize-booking';
 
@@ -58,21 +57,14 @@ export default function HostVenueBookings() {
     const token = localStorage.getItem('token');
 
     try {
-      // Fetch details
       const response = await fetch(`http://localhost:5000/api/venues/${id}`);
-      let venueData: Venue | null = null;
       if (response.ok) {
-        venueData = await response.json();
-      } else {
-        const local = getVenues();
-        venueData = local.find(v => v.id === id) || null;
-      }
-
-      if (venueData) {
+        const venueData = await response.json();
         setVenue(venueData);
+      } else {
+        setVenue(null);
       }
 
-      // Fetch bookings
       const bookingsResponse = await fetch(`http://localhost:5000/api/venues/${id}/bookings`);
       if (bookingsResponse.ok) {
         const bookingsData = await bookingsResponse.json();
@@ -82,9 +74,8 @@ export default function HostVenueBookings() {
       }
     } catch (err) {
       console.error('Error loading venue details or bookings:', err);
-      const local = getVenues();
-      const venueData = local.find(v => v.id === id) || null;
-      if (venueData) setVenue(venueData);
+      setVenue(null);
+      setBookings([]);
     } finally {
       setIsLoading(false);
     }

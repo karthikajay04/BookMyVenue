@@ -24,6 +24,8 @@ export interface Venue {
   closingTime?: string;
   status?: 'pending' | 'approved' | 'declined';
   rejectionReason?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export const sampleVenues: Venue[] = [

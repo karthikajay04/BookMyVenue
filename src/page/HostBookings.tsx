@@ -30,91 +30,9 @@ interface HostBooking {
   hostMail: string;
   checkInInstructions: string;
   bookingType?: string;
+  refundAmount?: number;
+  refundPercentage?: number;
 }
-
-// Mock Fallback Host Bookings for offline simulation
-const mockHostBookings: HostBooking[] = [
-  {
-    id: "BKG-9921",
-    venueId: "1",
-    venueTitle: "The Glass Pavilion",
-    venueLocation: "Los Angeles, CA",
-    venueImage: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=400",
-    startDate: "2026-06-12",
-    endDate: "2026-06-15",
-    guests: 75,
-    totalPrice: 1552.5,
-    status: "upcoming",
-    bookingDate: "2026-06-01",
-    paymentStatus: "paid",
-    renterName: "Sarah Jenkins",
-    renterEmail: "sarah.j@creativeagency.com",
-    renterPhone: "+1 (555) 019-2831",
-    hostName: "Host Account",
-    hostMail: "owner@bookmyvenue.com",
-    checkInInstructions: "Gate code is #1209. Please meet coordinator Michael at the entrance. AV check starts at 10 AM."
-  },
-  {
-    id: "BKG-4820",
-    venueId: "1",
-    venueTitle: "The Glass Pavilion",
-    venueLocation: "Los Angeles, CA",
-    venueImage: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=400",
-    startDate: "2026-06-25",
-    endDate: "2026-06-28",
-    guests: 90,
-    totalPrice: 2070.0,
-    status: "upcoming",
-    bookingDate: "2026-06-03",
-    paymentStatus: "paid",
-    renterName: "David Miller",
-    renterEmail: "d.miller@techcorps.org",
-    renterPhone: "+1 (555) 014-9988",
-    hostName: "Host Account",
-    hostMail: "owner@bookmyvenue.com",
-    checkInInstructions: "Check-in instructions: Enter via main lobby valet desk. Secure entry code: #4550."
-  },
-  {
-    id: "BKG-7712",
-    venueId: "2",
-    venueTitle: "Sunset Bay Villa",
-    venueLocation: "Miami, FL",
-    venueImage: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=400",
-    startDate: "2026-05-10",
-    endDate: "2026-05-12",
-    guests: 8,
-    totalPrice: 1656.0,
-    status: "completed",
-    bookingDate: "2026-04-15",
-    paymentStatus: "paid",
-    renterName: "Elena Rostova",
-    renterEmail: "elena@rostov.design",
-    renterPhone: "+1 (555) 017-4422",
-    hostName: "Host Account",
-    hostMail: "owner@bookmyvenue.com",
-    checkInInstructions: "Completed stay. Guest left location in excellent condition."
-  },
-  {
-    id: "BKG-3301",
-    venueId: "1",
-    venueTitle: "The Glass Pavilion",
-    venueLocation: "Los Angeles, CA",
-    venueImage: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=400",
-    startDate: "2026-04-01",
-    endDate: "2026-04-03",
-    guests: 60,
-    totalPrice: 1035.0,
-    status: "cancelled",
-    bookingDate: "2026-03-20",
-    paymentStatus: "refunded",
-    renterName: "Robert Dow",
-    renterEmail: "robert@dowassociates.com",
-    renterPhone: "+1 (555) 012-7733",
-    hostName: "Host Account",
-    hostMail: "owner@bookmyvenue.com",
-    checkInInstructions: "Booking cancelled and refunded."
-  }
-];
 
 export default function HostBookings(): React.JSX.Element {
   const navigate = useNavigate();
@@ -161,12 +79,11 @@ export default function HostBookings(): React.JSX.Element {
         const data = await response.json();
         setBookings(data);
       } else {
-        // Fallback mock values
-        setBookings(mockHostBookings);
+        setBookings([]);
       }
     } catch (err) {
-      console.error('Failed fetching host bookings from API, using fallback:', err);
-      setBookings(mockHostBookings);
+      console.error('Failed fetching host bookings from API:', err);
+      setBookings([]);
     } finally {
       setIsLoading(false);
     }
@@ -204,26 +121,14 @@ export default function HostBookings(): React.JSX.Element {
           'success'
         );
       } else {
-        // Mock fallback cancel action
-        setBookings(prev => prev.map(b => b.id === cancelBookingTarget.id ? { ...b, status: 'cancelled', paymentStatus: 'refunded' } : b));
-        triggerToast(
-          cancelBookingTarget.status === 'offline'
-            ? `Offline block ${cancelBookingTarget.id} updated locally to unlocked.`
-            : `Booking ${cancelBookingTarget.id} updated locally to cancelled.`,
-          'success'
-        );
+        const data = await response.json();
+        triggerToast(data.message || 'Failed to cancel booking.', 'error');
       }
       setCancelBookingTarget(null);
       fetchBookings();
     } catch (err) {
       console.error('Failed cancelling booking:', err);
-      setBookings(prev => prev.map(b => b.id === cancelBookingTarget.id ? { ...b, status: 'cancelled', paymentStatus: 'refunded' } : b));
-      triggerToast(
-        cancelBookingTarget.status === 'offline'
-          ? `Offline block ${cancelBookingTarget.id} updated locally to unlocked.`
-          : `Booking ${cancelBookingTarget.id} updated locally to cancelled.`,
-        'success'
-      );
+      triggerToast('Failed to cancel booking.', 'error');
       setCancelBookingTarget(null);
       fetchBookings();
     }
@@ -556,6 +461,24 @@ export default function HostBookings(): React.JSX.Element {
                     <span className="text-white/40">Payout Status</span>
                     <span className="text-white font-bold capitalize">{selectedBooking.paymentStatus}</span>
                   </div>
+                  {selectedBooking.status === 'cancelled' && selectedBooking.refundPercentage !== undefined && (
+                    <>
+                      <div className="flex justify-between py-1 border-b border-white/5">
+                        <span className="text-white/40">Refund Percentage</span>
+                        <span className="text-red-400 font-semibold">{selectedBooking.refundPercentage}%</span>
+                      </div>
+                      <div className="flex justify-between py-1 border-b border-white/5">
+                        <span className="text-white/40">Refund Amount Paid</span>
+                        <span className="text-red-400 font-semibold">₹{Number(selectedBooking.refundAmount || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between py-1 border-b border-white/5">
+                        <span className="text-white/40">Retained Earnings</span>
+                        <span className="text-emerald-400 font-semibold">
+                          ₹{Number(selectedBooking.totalPrice - (selectedBooking.refundAmount || 0)).toLocaleString()}
+                        </span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between py-1">
                     <span className="text-white/40 font-medium">Total Payout Cost</span>
                     <span className="text-sm font-bold text-[#c5a059]">₹{selectedBooking.totalPrice.toLocaleString()}</span>

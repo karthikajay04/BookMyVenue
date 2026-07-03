@@ -8,12 +8,14 @@ import VenueDetail from './page/VenueDetail';
 import BookVenue from './page/BookVenue';
 import AddVenue from './page/AddVenue';
 import Bookings from './page/UserBookings';
+import BookingDetail from './page/BookingDetail';
 import MyVenues from './page/MyVenues';
 import HostVenueDetail from './page/HostVenueDetail';
 import HostBookings from './page/HostBookings';
 import HostDashboard from './page/HostDashboard';
 import AdminDashboard from './page/AdminDashboard';
 import HostVenueBookings from './page/HostVenueBookings';
+import MapTest from './page/MapTest';
 
 // Route wrapper to require Admin role
 function AdminRoute({ children }: { children: React.ReactNode }) {
@@ -55,9 +57,11 @@ function App() {
         <Route path="/bookings" element={<NonAdminRoute><HostBookings /></NonAdminRoute>} />
         <Route path="/dashboard" element={<NonAdminRoute><HostDashboard /></NonAdminRoute>} />
         <Route path="/contact" element={<NonAdminRoute><Contact /></NonAdminRoute>} />
+        <Route path="/map-test" element={<MapTest />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/mybooking" element={<NonAdminRoute><Bookings /></NonAdminRoute>} />
+        <Route path="/mybooking/:id" element={<NonAdminRoute><BookingDetail /></NonAdminRoute>} />
         
         {/* Admin route */}
         <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />

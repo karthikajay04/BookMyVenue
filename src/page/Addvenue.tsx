@@ -10,6 +10,7 @@ import Navbar from '../components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { LocationPicker } from '@/components/map';
 import { addVenue } from '../data/venuesData';
 import type { Venue } from '../data/venuesData';
 
@@ -44,6 +45,8 @@ export default function AddVenue() {
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState(''); // Town / city name
   const [fullAddress, setFullAddress] = useState(''); // Full location
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [capacity, setCapacity] = useState<number>(0);
   const [squareFeet, setSquareFeet] = useState<number>(0);
   const [pricePerNight, setPricePerNight] = useState<number>(0);
@@ -83,6 +86,9 @@ export default function AddVenue() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
+  const availableEventTypes = Array.from(new Set([...PRESET_EVENT_TYPES, ...selectedEventTypes]));
+  const availableAmenities = Array.from(new Set([...PRESET_AMENITIES, ...selectedAmenities]));
 
   // Pricing calculations
   const basePrice = pricePerNight || 0;
@@ -228,6 +234,8 @@ export default function AddVenue() {
       description,
       pricePerNight,
       fullAddress,
+      latitude,
+      longitude,
       parking,
       amenities: selectedAmenities,
       squareFeet,
@@ -256,6 +264,8 @@ export default function AddVenue() {
             description,
             location,
             full_address: fullAddress,
+            latitude,
+            longitude,
             capacity: Number(capacity),
             square_feet: Number(squareFeet),
             price_per_night: Number(pricePerNight),
@@ -298,20 +308,7 @@ export default function AddVenue() {
     navigate(`/my-venues/${savedId}`);
   };
 
-  // Preset quick fill helper
-  const handleQuickFill = () => {
-    setTitle('The Glass Pavilion');
-    setDescription('An architectural masterpiece featuring 360-degree glass walls, high ceilings, and stunning garden views.');
-    setLocation('Los Angeles');
-    setFullAddress('10450 Wilshire Blvd, Los Angeles, CA 90024');
-    setCapacity(100);
-    setSquareFeet(8500);
-    setPricePerNight(450);
-    setHostType('Superhost');
-    setIsTopRated(true);
-    setBookingType('days');
-    setErrors({});
-  };
+
 
   return (
     <section
@@ -348,13 +345,6 @@ export default function AddVenue() {
           </div>
           
           <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              onClick={handleQuickFill}
-              className="bg-white/5 hover:bg-white/10 text-white rounded-full border border-white/15 px-5 h-10 text-xs transition-all"
-            >
-              Auto-Fill Sample Data
-            </Button>
             <button
               onClick={() => navigate('/my-venues')}
               className="group flex items-center gap-2 text-white/50 hover:text-[#c5a059] text-xs font-semibold transition-all bg-white/5 hover:bg-white/10 px-4 py-2.5 rounded-full border border-white/5"
@@ -583,7 +573,7 @@ export default function AddVenue() {
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Perfect For (Event Categories)</label>
                   <div className="flex flex-wrap gap-2 pt-0.5">
-                    {PRESET_EVENT_TYPES.map((type) => {
+                    {availableEventTypes.map((type) => {
                       const isSelected = selectedEventTypes.includes(type);
                       return (
                         <button
@@ -624,7 +614,7 @@ export default function AddVenue() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Amenities Checklist *</label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {PRESET_AMENITIES.map((item) => {
+                    {availableAmenities.map((item) => {
                       const isSelected = selectedAmenities.includes(item);
                       return (
                         <button
@@ -692,6 +682,57 @@ export default function AddVenue() {
                     <span className="text-[10px] text-red-400 block mt-1">{errors.fullAddress}</span>
                   )}
                 </div>
+                
+                <div className="pt-2 pb-4">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block mb-2">Pin Location on Map</label>
+                  <LocationPicker
+                    value={latitude && longitude ? { latitude, longitude } : null}
+                    onChange={(coords) => {
+                      setLatitude(coords.latitude);
+                      setLongitude(coords.longitude);
+                    }}
+                    onAddressPicked={(addressInfo) => {
+                      setFullAddress(addressInfo.formattedAddress);
+                      if (addressInfo.city) {
+                        setLocation(addressInfo.city);
+                      }
+                      setErrors(prev => ({ ...prev, fullAddress: '', location: '' }));
+                    }}
+                  />
+
+                  {/* Manual Coordinates Override */}
+                  <div className="flex flex-col sm:flex-row gap-4 w-full mt-3">
+                    <div className="flex-1 space-y-1">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Latitude (Manual Override)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="e.g. 11.8745"
+                        value={latitude === null || latitude === undefined ? '' : latitude}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? null : Number(e.target.value);
+                          setLatitude(val);
+                        }}
+                        className="w-full px-4 py-2.5 bg-white/[0.02] border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-[#c5a059]/40"
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Longitude (Manual Override)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="e.g. 75.3704"
+                        value={longitude === null || longitude === undefined ? '' : longitude}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? null : Number(e.target.value);
+                          setLongitude(val);
+                        }}
+                        className="w-full px-4 py-2.5 bg-white/[0.02] border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-[#c5a059]/40"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-white/50 block">Parking Accommodations</label>
                   <textarea

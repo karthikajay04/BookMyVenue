@@ -59,6 +59,8 @@ export const getAllVenues = async (req, res) => {
       description: row.description,
       location: row.location,
       fullAddress: row.full_address,
+      latitude: row.latitude !== null && row.latitude !== undefined ? Number(row.latitude) : null,
+      longitude: row.longitude !== null && row.longitude !== undefined ? Number(row.longitude) : null,
       capacity: Number(row.capacity),
       squareFeet: Number(row.square_feet),
       pricePerNight: Number(row.price_per_night),
@@ -134,6 +136,9 @@ export const getAllBookings = async (req, res) => {
         b.venue_id AS "venueId",
         v.title AS "venueTitle",
         v.location AS "venueLocation",
+        v.full_address AS "fullAddress",
+        v.latitude,
+        v.longitude,
         v.images[1] AS "venueImage",
         b.start_date AS "startDate",
         b.end_date AS "endDate",
@@ -155,7 +160,13 @@ export const getAllBookings = async (req, res) => {
       ORDER BY b.created_at DESC
     `);
     
-    res.json(result.rows);
+    const mappedBookings = result.rows.map(row => ({
+      ...row,
+      latitude: row.latitude !== null && row.latitude !== undefined ? Number(row.latitude) : null,
+      longitude: row.longitude !== null && row.longitude !== undefined ? Number(row.longitude) : null,
+    }));
+
+    res.json(mappedBookings);
   } catch (error) {
     console.error('Error fetching all bookings:', error);
     res.status(500).json({ message: 'Error fetching bookings' });

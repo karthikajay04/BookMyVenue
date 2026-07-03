@@ -9,7 +9,6 @@ import {
 import Navbar from '../components/Navbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getVenues } from '../data/venuesData';
 import type { Venue } from '../data/venuesData';
 import { cn } from '@/lib/utils';
 
@@ -71,15 +70,11 @@ export default function BookVenue() {
           const data = await response.json();
           setVenue(data);
         } else {
-          const localVenues = getVenues();
-          const localVenue = localVenues.find((v) => v.id === id);
-          setVenue(localVenue || null);
+          setVenue(null);
         }
       } catch (err) {
-        console.error('Failed to fetch venue details from backend, falling back:', err);
-        const localVenues = getVenues();
-        const localVenue = localVenues.find((v) => v.id === id);
-        setVenue(localVenue || null);
+        console.error('Failed to fetch venue details from backend:', err);
+        setVenue(null);
       } finally {
         setIsLoadingVenue(false);
       }
@@ -718,7 +713,7 @@ export default function BookVenue() {
                     <div className="flex items-start gap-2.5">
                       <Info className="w-4 h-4 text-[#c5a059] flex-shrink-0 mt-0.5" />
                       <span>
-                        <strong>Booking Window Limit:</strong> Stays are only bookable online up to 30 days in advance (up to {maxDate.toLocaleDateString()}). For dates further out, contact support.
+                        <strong>Booking Window Limit:</strong> Stays are only bookable online up to 30 days in advance (up to {maxDate.toLocaleDateString('en-GB')}). For dates further out, contact support.
                       </span>
                     </div>
                     {!isHours && (

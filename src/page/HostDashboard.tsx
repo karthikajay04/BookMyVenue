@@ -32,6 +32,8 @@ interface HostBooking {
   hostMail: string;
   checkInInstructions: string;
   bookingType?: string;
+  refundAmount?: number;
+  refundPercentage?: number;
 }
 
 interface Venue {

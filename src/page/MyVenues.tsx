@@ -8,7 +8,6 @@ import {
 import Navbar from '../components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getVenues, updateVenueInLocalStorage, deleteVenueFromLocalStorage } from '../data/venuesData';
 import type { Venue } from '../data/venuesData';
 import { cn } from '@/lib/utils';
 
@@ -70,16 +69,11 @@ export default function MyVenues() {
         const data = await response.json();
         setVenues(data);
       } else {
-        // Fallback to local storage
-        const local = getVenues();
-        // Filter local storage venues owned by this user
-        const userVenues = local.filter(v => v.hostType === 'Superhost' || v.id === '1' || v.id === '2');
-        setVenues(userVenues);
+        setVenues([]);
       }
     } catch (err) {
-      console.error('Failed fetching host venues from backend, falling back:', err);
-      const local = getVenues();
-      setVenues(local);
+      console.error('Failed fetching host venues from backend:', err);
+      setVenues([]);
     } finally {
       setIsLoading(false);
     }
@@ -116,15 +110,14 @@ export default function MyVenues() {
       if (response.ok) {
         triggerToast('Venue deleted successfully.', 'success');
       } else {
-        deleteVenueFromLocalStorage(deletingVenueId);
-        triggerToast('Venue removed from local storage.', 'success');
+        const data = await response.json();
+        triggerToast(data.message || 'Failed to delete venue.', 'error');
       }
       setDeletingVenueId(null);
       fetchHostVenues();
     } catch (err) {
-      console.error('Failed to delete venue, falling back:', err);
-      deleteVenueFromLocalStorage(deletingVenueId);
-      triggerToast('Venue removed from local storage.', 'success');
+      console.error('Failed to delete venue:', err);
+      triggerToast('Failed to delete venue.', 'error');
       setDeletingVenueId(null);
       fetchHostVenues();
     }
@@ -211,11 +204,7 @@ export default function MyVenues() {
                       alt={venue.title}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-103"
                     />
-                    {venue.isTopRated && (
-                      <div className="absolute top-2 left-2 bg-[#c5a059] text-black text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full">
-                        Luxury
-                      </div>
-                    )}
+
                   </div>
                   <div className="text-center sm:text-left space-y-2.5 w-full min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2">
@@ -225,8 +214,8 @@ export default function MyVenues() {
                         venue.status === "approved"
                           ? "bg-green-500/10 text-green-400 border-green-500/20"
                           : venue.status === "declined"
-                          ? "bg-red-500/10 text-red-400 border-red-500/20"
-                          : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                            ? "bg-red-500/10 text-red-400 border-red-500/20"
+                            : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
                       )}>
                         <span className={cn(
                           "w-1.5 h-1.5 rounded-full",

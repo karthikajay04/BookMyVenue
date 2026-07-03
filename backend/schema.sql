@@ -3,6 +3,9 @@ DROP TABLE IF EXISTS bookings CASCADE;
 DROP TABLE IF EXISTS venues CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
+-- Enable btree_gist extension for GiST exclusion constraints on scalar types
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
 -- 1. Create Users Table
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
@@ -20,6 +23,8 @@ CREATE TABLE venues (
     description TEXT NOT NULL,
     location VARCHAR(255) NOT NULL,
     full_address TEXT NOT NULL,
+    latitude NUMERIC(9, 6),
+    longitude NUMERIC(9, 6),
     capacity INTEGER NOT NULL CHECK (capacity > 0),
     square_feet INTEGER NOT NULL CHECK (square_feet > 0),
     price_per_night NUMERIC(10, 2) NOT NULL CHECK (price_per_night >= 0),
@@ -55,6 +60,8 @@ CREATE TABLE bookings (
     user_id INTEGER REFERENCES users(id) ON DELETE SET NULL, -- Null for offline locks
     start_date TIMESTAMP NOT NULL,
     end_date TIMESTAMP NOT NULL,
+    blocked_end_date TIMESTAMP NOT NULL, -- end_date + cleaning_gap (or end_date if daily)
+    cleaning_gap INTEGER DEFAULT 0 CHECK (cleaning_gap >= 0),
     guests INTEGER DEFAULT 0 CHECK (guests >= 0),
     total_price NUMERIC(10, 2) DEFAULT 0.00 CHECK (total_price >= 0),
     status VARCHAR(50) DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'cancelled', 'offline')),
@@ -65,8 +72,15 @@ CREATE TABLE bookings (
     renter_phone VARCHAR(50),
     renter_email VARCHAR(255),
     booking_type VARCHAR(50) DEFAULT 'days' CHECK (booking_type IN ('days', 'hours')),
+    refund_amount NUMERIC(10, 2) DEFAULT 0.00 CHECK (refund_amount >= 0),
+    refund_percentage INTEGER DEFAULT 0 CHECK (refund_percentage >= 0 AND refund_percentage <= 100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT chk_booking_dates CHECK (end_date >= start_date)
+    CONSTRAINT chk_booking_dates CHECK (end_date >= start_date),
+    CONSTRAINT chk_blocked_end CHECK (blocked_end_date >= end_date),
+    CONSTRAINT no_overlapping_bookings EXCLUDE USING gist (
+        venue_id WITH =,
+        tsrange(start_date, blocked_end_date, '[)') WITH &&
+    ) WHERE (status != 'cancelled')
 );
 
 -- Create indexes on bookings to speed up conflict checking and searches

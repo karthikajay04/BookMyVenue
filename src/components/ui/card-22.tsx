@@ -26,10 +26,9 @@ export const PlaceCard = ({
   tags,
   rating,
   title,
-  hostType,
-  isTopRated = false,
+
   description,
-  pricePerNight,
+
   capacity,
   eventTypes,
   className,
@@ -177,7 +176,7 @@ export const PlaceCard = ({
             <Users className="w-3.5 h-3.5 text-[#c5a059]" />
             <span>Capacity: <strong className="text-white">{capacity} Guests</strong></span>
           </div>
-          
+
           {/* Event Types */}
           <div className="flex flex-wrap gap-1.5 pt-0.5">
             {eventTypes.map((type) => (

@@ -9,6 +9,8 @@ const mapVenueRow = (row) => {
     description: row.description,
     location: row.location,
     fullAddress: row.full_address,
+    latitude: row.latitude !== null && row.latitude !== undefined ? Number(row.latitude) : null,
+    longitude: row.longitude !== null && row.longitude !== undefined ? Number(row.longitude) : null,
     capacity: Number(row.capacity),
     squareFeet: Number(row.square_feet),
     pricePerNight: Number(row.price_per_night),
@@ -107,7 +109,8 @@ export const createVenue = async (req, res) => {
   const {
     title, description, location, full_address, capacity, square_feet, price_per_night,
     host_type, rating, is_top_rated, date_range, parking, catering,
-    images, amenities, rules, event_types, booking_type, cleaning_gap, opening_time, closing_time
+    images, amenities, rules, event_types, booking_type, cleaning_gap, opening_time, closing_time,
+    latitude, longitude
   } = req.body;
 
   const host_id = req.user.id;
@@ -120,13 +123,16 @@ export const createVenue = async (req, res) => {
 
     const result = await query(`
       INSERT INTO venues (
-        title, description, location, full_address, capacity, square_feet, price_per_night,
+        title, description, location, full_address, latitude, longitude, capacity, square_feet, price_per_night,
         host_id, host_type, rating, is_top_rated, date_range, parking, catering,
         images, amenities, rules, event_types, status, booking_type, cleaning_gap, opening_time, closing_time
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
       RETURNING *
     `, [
-      title, description, location, full_address, capacity, square_feet, price_per_night,
+      title, description, location, full_address,
+      latitude !== undefined && latitude !== null ? Number(latitude) : null,
+      longitude !== undefined && longitude !== null ? Number(longitude) : null,
+      capacity, square_feet, price_per_night,
       host_id, host_type || 'Superhost', rating || 5.0, is_top_rated || false, date_range || 'Available', parking || '', catering || '',
       images || [], amenities || [], rules || [], event_types || [], 'pending',
       booking_type || 'days', Number(cleaning_gap || 0), opening_time || '08:00', closing_time || '22:00'
@@ -189,6 +195,8 @@ export const updateVenue = async (req, res) => {
   const cleaning_gap = req.body.cleaningGap !== undefined ? req.body.cleaningGap : req.body.cleaning_gap;
   const opening_time = req.body.openingTime || req.body.opening_time;
   const closing_time = req.body.closingTime || req.body.closing_time;
+  const latitude = req.body.latitude;
+  const longitude = req.body.longitude;
 
   try {
     // Check ownership
@@ -227,14 +235,18 @@ export const updateVenue = async (req, res) => {
         booking_type = $17,
         cleaning_gap = $18,
         opening_time = $19,
-        closing_time = $20
-      WHERE id = $21 AND host_id = $22
+        closing_time = $20,
+        latitude = $21,
+        longitude = $22
+      WHERE id = $23 AND host_id = $24
       RETURNING *
     `, [
       title, description, location, full_address, Number(capacity), Number(square_feet), Number(price_per_night),
       host_type || 'Superhost', is_top_rated || false, date_range || 'Available', parking || '', catering || '',
       images || [], amenities || [], rules || [], event_types || [],
       booking_type || 'days', Number(cleaning_gap || 0), opening_time || '08:00', closing_time || '22:00',
+      latitude !== undefined && latitude !== null ? Number(latitude) : null,
+      longitude !== undefined && longitude !== null ? Number(longitude) : null,
       id, host_id
     ]);
 

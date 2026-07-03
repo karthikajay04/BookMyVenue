@@ -3,7 +3,6 @@ import { ChevronDown, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { PlaceCard } from '@/components/ui/card-22';
-import { getVenues } from '../data/venuesData';
 import type { Venue } from '../data/venuesData';
 
 const capacityOptions = [
@@ -17,7 +16,7 @@ const sortOptions = [
   { value: 'Default', label: 'Default Sorting' },
   { value: 'PriceAsc', label: 'Price: Low to High' },
   { value: 'PriceDesc', label: 'Price: High to Low' },
-  { value: 'RatingDesc', label: 'Rating: High to Low' },
+
 ];
 
 export default function Venues() {
@@ -27,7 +26,7 @@ export default function Venues() {
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [selectedCapacity, setSelectedCapacity] = useState<string>('All');
   const [capacityDropdownOpen, setCapacityDropdownOpen] = useState<boolean>(false);
-  
+
   // Search & Sort States
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('Default');
@@ -41,11 +40,11 @@ export default function Venues() {
           const data = await response.json();
           setVenues(data);
         } else {
-          setVenues(getVenues());
+          setVenues([]);
         }
       } catch (err) {
-        console.error('Failed to fetch venues from backend, falling back to local storage:', err);
-        setVenues(getVenues());
+        console.error('Failed to fetch venues from backend:', err);
+        setVenues([]);
       }
     };
     fetchVenues();
@@ -82,7 +81,7 @@ export default function Venues() {
     .sort((a, b) => {
       if (sortBy === 'PriceAsc') return a.pricePerNight - b.pricePerNight;
       if (sortBy === 'PriceDesc') return b.pricePerNight - a.pricePerNight;
-      if (sortBy === 'RatingDesc') return Number(b.rating) - Number(a.rating);
+
       return 0; // Default
     });
 
