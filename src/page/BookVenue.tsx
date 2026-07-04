@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, MapPin, Users, Car, Check, ShieldAlert,
   Maximize2, Calendar, Star, Sparkles, Phone, Mail, ArrowRight, CheckCircle2, Info,
-  QrCode, UploadCloud
+  QrCode
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { Badge } from '@/components/ui/badge';
@@ -39,7 +39,6 @@ export default function BookVenue() {
 
   // Mock QR payment states
   const [transactionId, setTransactionId] = useState('');
-  const [receiptFileName, setReceiptFileName] = useState('');
 
   // Pre-fill user details from localStorage
   useEffect(() => {
@@ -842,64 +841,26 @@ export default function BookVenue() {
 
                     <hr className="border-white/5" />
 
-                    {/* Transaction Reference & Receipt Drop Zone */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                      {/* UPI Reference Number Input */}
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] text-white/55 uppercase block flex justify-between">
-                          <span>UPI Transaction Ref Number *</span>
-                          <span className="text-white/30 lowercase">12-digit code</span>
-                        </label>
-                        <input
-                          type="text"
-                          maxLength={12}
-                          value={transactionId}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, '');
-                            setTransactionId(val);
-                          }}
-                          placeholder="e.g. 302849182349"
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
-                        />
-                        {transactionId && transactionId.length !== 12 && (
-                          <p className="text-[10px] text-amber-500/80">Ref number must be exactly 12 digits ({transactionId.length}/12)</p>
-                        )}
-                      </div>
-
-                      {/* Mock Screenshot Uploader */}
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] text-white/50 uppercase block">Upload Receipt Screenshot *</label>
-                        <div
-                          className={cn(
-                            "border-2 border-dashed rounded-xl p-3 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[78px]",
-                            receiptFileName
-                              ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400"
-                              : "border-white/10 bg-white/5 text-white/40 hover:border-[#c5a059]/30"
-                          )}
-                          onClick={() => {
-                            const mockFiles = ["gpay_receipt_932.png", "phonepe_payment_receipt.jpg", "paytm_screenshot_2026.png"];
-                            const randomFile = mockFiles[Math.floor(Math.random() * mockFiles.length)];
-                            setReceiptFileName(randomFile);
-                          }}
-                        >
-                          {receiptFileName ? (
-                            <div className="space-y-0.5">
-                              <span className="text-emerald-400 text-xs font-semibold flex items-center justify-center gap-1">
-                                <Check className="w-3.5 h-3.5" /> Proof Added
-                              </span>
-                              <p className="text-[10px] text-white/60 truncate max-w-[200px]">{receiptFileName} (1.2 MB)</p>
-                            </div>
-                          ) : (
-                            <div className="space-y-1 py-1">
-                              <UploadCloud className="w-5 h-5 mx-auto text-white/30" />
-                              <span className="text-[11px] font-medium block text-white/60">Add Receipt Screenshot</span>
-                              <p className="text-[9px] text-white/40">Click to auto-simulate upload</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
+                    {/* Transaction Reference */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] text-white/55 uppercase block flex justify-between">
+                        <span>UPI Transaction Ref Number *</span>
+                        <span className="text-white/30 lowercase">12-digit code</span>
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={12}
+                        value={transactionId}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          setTransactionId(val);
+                        }}
+                        placeholder="e.g. 302849182349"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-white focus:outline-none focus:border-[#c5a059]/50 transition-colors"
+                      />
+                      {transactionId && transactionId.length !== 12 && (
+                        <p className="text-[10px] text-amber-500/80">Ref number must be exactly 12 digits ({transactionId.length}/12)</p>
+                      )}
                     </div>
 
                   </div>
@@ -919,7 +880,7 @@ export default function BookVenue() {
                       Back to Date
                     </Button>
                     <Button
-                      disabled={isSubmittingBooking || !renterName || !renterPhone || !renterEmail || transactionId.length !== 12 || !receiptFileName}
+                      disabled={isSubmittingBooking || !renterName || !renterPhone || !renterEmail || transactionId.length !== 12}
                       onClick={handleAuthorizePayment}
                       className="bg-[#c5a059] hover:bg-[#b08e4d] disabled:opacity-40 disabled:hover:bg-[#c5a059] text-black font-semibold rounded-xl text-xs h-11 px-8 flex items-center justify-center gap-2"
                     >
