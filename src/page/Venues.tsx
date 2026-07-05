@@ -280,10 +280,7 @@ export default function Venues() {
               tags={venue.tags}
               rating={venue.rating}
               title={venue.title}
-              hostType={venue.hostType}
-              isTopRated={venue.isTopRated}
               description={venue.description}
-              pricePerNight={venue.pricePerNight}
               capacity={venue.capacity}
               eventTypes={venue.eventTypes}
               className="border-white/10 bg-black/40 backdrop-blur-md shadow-2xl"

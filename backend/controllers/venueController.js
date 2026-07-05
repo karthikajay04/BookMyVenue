@@ -1,6 +1,11 @@
 import { query } from '../db.js';
 
-// Helper to convert database snake_case row to camelCase and normalize types
+/**
+ * Helper to map standard database snake_case columns to camelCase variables
+ * and cast numeric Postgres types correctly to prevent frontend math bugs.
+ * @param {object} row - The database row returned by pg client
+ * @returns {object|null} CamelCased and formatted venue object
+ */
 const mapVenueRow = (row) => {
   if (!row) return null;
   return {
@@ -39,7 +44,11 @@ const mapVenueRow = (row) => {
   };
 };
 
-// Get all venues with optional filters
+/**
+ * @desc    Get all approved venues with optional location and capacity filters
+ * @route   GET /api/venues
+ * @access  Public
+ */
 export const getVenues = async (req, res) => {
   try {
     const { location, capacity } = req.query;
@@ -84,7 +93,11 @@ export const getVenues = async (req, res) => {
   }
 };
 
-// Get a single venue by ID
+/**
+ * @desc    Get detailed fields for a single venue by its ID
+ * @route   GET /api/venues/:id
+ * @access  Public
+ */
 export const getVenueById = async (req, res) => {
   const { id } = req.params;
   try {
@@ -104,7 +117,11 @@ export const getVenueById = async (req, res) => {
   }
 };
 
-// Create a new venue (Venue Owners)
+/**
+ * @desc    Create a new venue listing and set its status to pending approval
+ * @route   POST /api/venues
+ * @access  Private (Venue Owner only)
+ */
 export const createVenue = async (req, res) => {
   const {
     title, description, location, full_address, capacity, square_feet, price_per_night,
@@ -151,7 +168,11 @@ export const createVenue = async (req, res) => {
   }
 };
 
-// Get venues owned by the authenticated host
+/**
+ * @desc    Get all venues owned by the currently authenticated host
+ * @route   GET /api/venues/my-venues
+ * @access  Private (Venue Owner only)
+ */
 export const getMyVenues = async (req, res) => {
   const host_id = req.user.id;
   try {
@@ -169,7 +190,11 @@ export const getMyVenues = async (req, res) => {
   }
 };
 
-// Update an existing venue owned by the host
+/**
+ * @desc    Update details for a venue owned by the authenticated host and reset its status to pending
+ * @route   PUT /api/venues/:id
+ * @access  Private (Venue Owner only)
+ */
 export const updateVenue = async (req, res) => {
   const { id } = req.params;
   const host_id = req.user.id;
@@ -263,7 +288,11 @@ export const updateVenue = async (req, res) => {
   }
 };
 
-// Delete a venue owned by the host
+/**
+ * @desc    Delete a venue listing from the platform database
+ * @route   DELETE /api/venues/:id
+ * @access  Private (Venue Owner only)
+ */
 export const deleteVenue = async (req, res) => {
   const { id } = req.params;
   const host_id = req.user.id;

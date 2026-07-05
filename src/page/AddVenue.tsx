@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, MapPin, Users, Car, Check, ShieldAlert, Utensils,
-  Maximize2, Calendar, Star, Sparkles, Building, Settings,
-  AlertCircle, PlusCircle, Trash2, BadgeAlert, Eye, FileText
+  ArrowLeft, MapPin, Check, ShieldAlert,
+  Calendar, Star, Sparkles, Building, Settings,
+  PlusCircle, Trash2, BadgeAlert
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { LocationPicker } from '@/components/map';
 import { addVenue } from '../data/venuesData';
 import type { Venue } from '../data/venuesData';
+
 
 const PRESET_AMENITIES = [
   'High-speed Wi-Fi',
@@ -37,10 +38,15 @@ const MOCK_IMAGES = [
   'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=800&auto=format&fit=crop',
 ];
 
+/**
+ * AddVenue Component
+ * Renders an interactive form for hosts to create and publish a new venue listing.
+ * Includes local state management for inline template preview and file upload handling.
+ */
 export default function AddVenue() {
   const navigate = useNavigate();
   
-  // Form State
+  // Form Input States
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState(''); // Town / city name

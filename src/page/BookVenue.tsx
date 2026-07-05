@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, MapPin, Users, Car, Check, ShieldAlert,
-  Maximize2, Calendar, Star, Sparkles, Phone, Mail, ArrowRight, CheckCircle2, Info,
+  ArrowLeft, MapPin, Users, ShieldAlert,
+  Maximize2, ArrowRight, CheckCircle2, Info,
   QrCode
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
@@ -12,6 +12,13 @@ import { Button } from '@/components/ui/button';
 import type { Venue } from '../data/venuesData';
 import { cn } from '@/lib/utils';
 
+/**
+ * BookVenue Component
+ * Renders the multi-step checkout wizard for booking a venue.
+ * Step 1: Date/Time Slot selection (checks operating hours and daily/hourly overlaps).
+ * Step 2: Renter information and mock UPI QR code verification.
+ * Step 3: Success receipt confirmation.
+ */
 export default function BookVenue() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();

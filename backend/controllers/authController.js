@@ -2,7 +2,14 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query } from '../db.js';
 
-// Generate secure JWT Token based on id, email, and role
+/**
+ * Generates a signed JSON Web Token (JWT) containing user identifiers.
+ * The token has a standard expiration duration of 7 days.
+ * @param {number|string} id - The user database identifier
+ * @param {string} email - The user email address
+ * @param {string} role - The user authority role ('user', 'venue_owner', 'admin')
+ * @returns {string} Signed JWT token string
+ */
 const generateToken = (id, email, role) => {
   return jwt.sign(
     { id, email, role },
@@ -12,9 +19,9 @@ const generateToken = (id, email, role) => {
 };
 
 /**
- * @desc    Register a new user
+ * @desc    Register a new user profile with hashed credentials
  * @route   POST /api/auth/signup
- * @access  Public
+ * @access  Public (Enforces lowercase emails, basic length limits, and restricts admin self-creation)
  */
 export const registerUser = async (req, res) => {
   const { name, email, password, role } = req.body;
@@ -69,9 +76,9 @@ export const registerUser = async (req, res) => {
 };
 
 /**
- * @desc    Authenticate user & get token
+ * @desc    Authenticate user credentials and generate active session JWT token
  * @route   POST /api/auth/login
- * @access  Public
+ * @access  Public (Validates email and bcrypt password match)
  */
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;

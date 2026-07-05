@@ -5,7 +5,7 @@ import fs from 'fs';
 
 const router = express.Router();
 
-// Ensure uploads directory exists
+// Ensure the local uploads directory exists on disk initialization
 const uploadDir = 'uploads';
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);

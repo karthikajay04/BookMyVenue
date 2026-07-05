@@ -11,10 +11,7 @@ interface PlaceCardProps {
   tags: string[];
   rating: number;
   title: string;
-  hostType: string;
-  isTopRated?: boolean;
   description: string;
-  pricePerNight: number;
   capacity: number;
   eventTypes: string[];
   className?: string;
@@ -26,9 +23,7 @@ export const PlaceCard = ({
   tags,
   rating,
   title,
-
   description,
-
   capacity,
   eventTypes,
   className,

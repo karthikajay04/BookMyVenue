@@ -1,8 +1,12 @@
 import { query } from '../db.js';
 
-// Get bookings for user or venue owner
+/**
+ * @desc    Get all bookings related to the authenticated user
+ * @route   GET /api/bookings
+ * @access  Private (User sees their own bookings; Venue Owner sees bookings for their venues)
+ */
 export const getBookings = async (req, res) => {
-  const { id, email, role } = req.user;
+  const { id, role } = req.user;
 
   try {
     let result;
@@ -99,7 +103,11 @@ export const getBookings = async (req, res) => {
   }
 };
 
-// Create a new booking
+/**
+ * @desc    Create a new booking inquiry
+ * @route   POST /api/bookings
+ * @access  Private (User role only; enforces 30-day limits & operating hour constraints)
+ */
 export const createBooking = async (req, res) => {
   const { venueId, startDate, endDate, guests, totalPrice, renterName, renterPhone, renterEmail } = req.body;
   const user_id = req.user.id;
@@ -167,7 +175,7 @@ export const createBooking = async (req, res) => {
 
     // Schedule overlap conflict validation
     const existingBookings = await query(`
-      SELECT start_date, end_date, blocked_end_date, booking_type FROM bookings 
+      SELECT start_date, end_date, blocked_end_date FROM bookings 
       WHERE venue_id = $1 AND status != 'cancelled'
     `, [venueId]);
 
@@ -243,7 +251,11 @@ export const createBooking = async (req, res) => {
   }
 };
 
-// Cancel a booking
+/**
+ * @desc    Cancel an existing booking and calculate refund based on time-to-event rules
+ * @route   PUT /api/bookings/:id/cancel
+ * @access  Private (User or Venue Owner)
+ */
 export const cancelBooking = async (req, res) => {
   const { id } = req.params;
   const { id: userId, role } = req.user;
@@ -350,7 +362,11 @@ export const cancelBooking = async (req, res) => {
   }
 };
 
-// Lock a venue for offline bookings/maintenance (Venue Owners)
+/**
+ * @desc    Lock a venue for offline bookings, private events, or maintenance
+ * @route   POST /api/bookings/lock
+ * @access  Private (Venue Owner only)
+ */
 export const lockVenue = async (req, res) => {
   const { venueId, startDate, endDate, notes, totalPrice, guests, renterName, renterPhone, renterEmail } = req.body;
   const host_id = req.user.id;
@@ -411,7 +427,7 @@ export const lockVenue = async (req, res) => {
 
     // Schedule overlap conflict validation
     const existingBookings = await query(`
-      SELECT start_date, end_date, blocked_end_date, booking_type FROM bookings 
+      SELECT start_date, end_date, blocked_end_date FROM bookings 
       WHERE venue_id = $1 AND status != 'cancelled'
     `, [venueId]);
 
@@ -484,7 +500,11 @@ export const lockVenue = async (req, res) => {
   }
 };
 
-// Get bookings of a specific venue by ID
+/**
+ * @desc    Get non-cancelled bookings of a specific venue for calendar scheduling indicators
+ * @route   GET /api/venues/:id/bookings
+ * @access  Public
+ */
 export const getVenueBookings = async (req, res) => {
   const { id } = req.params;
   try {
@@ -506,6 +526,11 @@ export const getVenueBookings = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Fetch venue availability timelines (hours-based slots or daily blocked dates)
+ * @route   GET /api/venues/:id/availability
+ * @access  Public
+ */
 export const getVenueAvailability = async (req, res) => {
   const { id } = req.params;
   try {
@@ -548,7 +573,7 @@ export const getVenueAvailability = async (req, res) => {
 
       // Fetch bookings that touch the requested date
       const bookingsRes = await query(`
-        SELECT start_date, end_date, blocked_end_date, cleaning_gap 
+        SELECT start_date, end_date, blocked_end_date 
         FROM bookings 
         WHERE venue_id = $1 
           AND status != 'cancelled' 
@@ -628,7 +653,11 @@ export const getVenueAvailability = async (req, res) => {
   }
 };
 
-// Get details for a single booking by ID
+/**
+ * @desc    Get detailed parameters for a single booking by ID
+ * @route   GET /api/bookings/:id
+ * @access  Private (Owner, Renter, or Admin only)
+ */
 export const getBookingById = async (req, res) => {
   const { id } = req.params;
   const { id: userId, role } = req.user;

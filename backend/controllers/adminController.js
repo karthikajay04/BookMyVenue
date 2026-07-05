@@ -1,6 +1,11 @@
 import { query } from '../db.js';
 
 
+/**
+ * @desc    Get aggregate platform metrics (user/host/venue counts, platform earnings, volume)
+ * @route   GET /api/admin/stats
+ * @access  Private (Admin role only)
+ */
 export const getDashboardStats = async (req, res) => {
   try {
     // user counts
@@ -42,7 +47,11 @@ export const getDashboardStats = async (req, res) => {
   }
 };
 
-// all venues
+/**
+ * @desc    Get all venues across the platform for approval review
+ * @route   GET /api/admin/venues
+ * @access  Private (Admin role only)
+ */
 export const getAllVenues = async (req, res) => {
   try {
     const result = await query(`
@@ -88,7 +97,11 @@ export const getAllVenues = async (req, res) => {
   }
 };
 
-// Approve or decline a venue
+/**
+ * @desc    Approve or decline a pending venue listing
+ * @route   PUT /api/admin/venues/:id/status
+ * @access  Private (Admin role only)
+ */
 export const updateVenueStatus = async (req, res) => {
   const { id } = req.params;
   const { status, rejectionReason } = req.body; // 'approved' or 'declined'
@@ -127,7 +140,11 @@ export const updateVenueStatus = async (req, res) => {
   }
 };
 
-// Get all bookings across the platform
+/**
+ * @desc    Get list of all bookings across the platform
+ * @route   GET /api/admin/bookings
+ * @access  Private (Admin role only)
+ */
 export const getAllBookings = async (req, res) => {
   try {
     const result = await query(`
@@ -173,7 +190,11 @@ export const getAllBookings = async (req, res) => {
   }
 };
 
-// Get all registered users and venue owners
+/**
+ * @desc    Get list of all registered platform users and hosts
+ * @route   GET /api/admin/users
+ * @access  Private (Admin role only)
+ */
 export const getAllUsers = async (req, res) => {
   try {
     const result = await query(`

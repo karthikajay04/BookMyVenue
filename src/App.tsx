@@ -17,7 +17,8 @@ import AdminDashboard from './page/AdminDashboard';
 import HostVenueBookings from './page/HostVenueBookings';
 import MapTest from './page/MapTest';
 
-// Route wrapper to require Admin role
+// Route guard to restrict access only to users with the 'admin' role.
+// Redirects unauthorized users to the home page, and unauthenticated users to the login page.
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const userStr = localStorage.getItem('user');
   if (!userStr) return <Navigate to="/login" replace />;
@@ -30,7 +31,8 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Route wrapper to prevent Admin from accessing normal pages
+// Route wrapper to redirect logged-in Admins to the admin panel dashboard
+// when they try to access normal user/host pages.
 function NonAdminRoute({ children }: { children: React.ReactNode }) {
   const userStr = localStorage.getItem('user');
   if (userStr) {

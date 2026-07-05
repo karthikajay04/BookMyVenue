@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+
+// Standard 7-day week calendar columns header
+const daysOfWeek = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 export type DayType = {
   day: string;
@@ -308,7 +312,7 @@ const InteractiveCalendar = React.forwardRef<
     <AnimatePresence mode="wait">
       <motion.div
         ref={ref}
-        className="relative mx-auto my-10 flex w-full flex-col items-center justify-center gap-8 lg:flex-row"
+        className={cn("relative mx-auto my-10 flex w-full flex-col items-center justify-center gap-8 lg:flex-row", className)}
         {...props}
       >
         <motion.div layout className="w-full max-w-lg">
@@ -451,4 +455,4 @@ InteractiveCalendar.displayName = 'InteractiveCalendar';
 
 export default InteractiveCalendar;
 
-const daysOfWeek = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
